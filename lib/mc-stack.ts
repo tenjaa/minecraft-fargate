@@ -1,13 +1,13 @@
 import * as cdk from '@aws-cdk/core';
+import {CfnOutput, CfnParameter} from '@aws-cdk/core';
 import * as ec2 from "@aws-cdk/aws-ec2";
 import {SubnetType} from "@aws-cdk/aws-ec2";
 import * as ecs from "@aws-cdk/aws-ecs";
-import {CfnCluster, Compatibility, ContainerImage, LogDriver} from "@aws-cdk/aws-ecs";
+import {CfnCluster, CfnService, Compatibility, ContainerImage, LogDriver} from "@aws-cdk/aws-ecs";
 import {Effect, PolicyStatement} from '@aws-cdk/aws-iam';
 import {Bucket} from '@aws-cdk/aws-s3';
 import {Code, Function, Runtime} from '@aws-cdk/aws-lambda';
 import {LambdaIntegration, RestApi} from '@aws-cdk/aws-apigateway';
-import {CfnOutput, CfnParameter} from '@aws-cdk/core';
 import {Secret} from '@aws-cdk/aws-secretsmanager';
 import {DockerImageAsset} from '@aws-cdk/aws-ecr-assets';
 import * as path from 'path';
@@ -40,8 +40,8 @@ export class McStack extends cdk.Stack {
       vpc: vpc
     });
 
-    const cfnEcsCluster = cluster.node.defaultChild as CfnCluster;
-    cfnEcsCluster.capacityProviders = ['FARGATE_SPOT'];
+    const cfnCluster = cluster.node.defaultChild as CfnCluster;
+    cfnCluster.capacityProviders = ['FARGATE_SPOT'];
 
     const taskDefinition = new ecs.TaskDefinition(this, "mc-task", {
       compatibility: Compatibility.FARGATE,
@@ -105,6 +105,12 @@ export class McStack extends cdk.Stack {
       assignPublicIp: true,
       securityGroups: [securityGroup]
     });
+
+    const cfnService = mcService.node.children[0] as CfnService;
+    cfnService.capacityProviderStrategy = [{
+      capacityProvider: "FARGATE_SPOT",
+      weight: 1000
+    }]
 
     taskDefinition.addToTaskRolePolicy(new PolicyStatement({
       effect: Effect.ALLOW,

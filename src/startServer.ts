@@ -1,7 +1,5 @@
 import {UpdateServiceRequest} from 'aws-sdk/clients/ecs';
-import S3, {ListObjectsV2Output, ListObjectsV2Request} from 'aws-sdk/clients/s3';
-import {Request} from 'aws-sdk/lib/request';
-import {AWSError} from 'aws-sdk/lib/error';
+import {ListObjectsV2Request} from 'aws-sdk/clients/s3';
 
 const AWS = require('aws-sdk');
 const ecs = new AWS.ECS();
@@ -12,7 +10,7 @@ const duckDnsDomain = process.env.DUCK_DNS_DOMAIN!
 const clusterArn = process.env.MC_CLUSTER!
 const serviceArn = process.env.MC_SERVICE!
 
-export const handler = async (event: any = {}) : Promise <any> => {
+export const handler = async (event: any = {}): Promise<any> => {
   try {
     const updateServiceRequest: UpdateServiceRequest = {
       cluster: clusterArn,
