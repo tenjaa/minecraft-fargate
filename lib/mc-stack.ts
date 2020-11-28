@@ -5,7 +5,7 @@ import {SubnetType} from "@aws-cdk/aws-ec2";
 import * as ecs from "@aws-cdk/aws-ecs";
 import {CfnCluster, CfnService, Compatibility, ContainerImage, LogDriver} from "@aws-cdk/aws-ecs";
 import {Effect, PolicyStatement} from '@aws-cdk/aws-iam';
-import {Bucket} from '@aws-cdk/aws-s3';
+import {BlockPublicAccess, Bucket} from '@aws-cdk/aws-s3';
 import {Code, Function, Runtime} from '@aws-cdk/aws-lambda';
 import {LambdaIntegration, RestApi} from '@aws-cdk/aws-apigateway';
 import {Secret} from '@aws-cdk/aws-secretsmanager';
@@ -16,14 +16,22 @@ export class McStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const serverBucketName = new CfnParameter(this, "serverBucketName", {
-      description: "Name of the bucket where your (existing) server data (eg. world/mods) lives in",
-      default: ""
+    const cpu = new CfnParameter(this, "cpu", {
+      default: 512
+    });
+    const memoryMiB = new CfnParameter(this, "memoryMiB", {
+      default: 1024
     });
     const duckDnsSubDomain = new CfnParameter(this, "duckDnsSubDomain");
     const duckDnsToken = Secret.fromSecretNameV2(this, "duckDnsToken", "mcDuckDnsToken");
 
-    const bucket = this.getServerBucket(serverBucketName);
+    const bucket = new Bucket(this, "serverDataBucket", {
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      versioned: true,
+      lifecycleRules: [{
+        noncurrentVersionExpiration: cdk.Duration.days(7)
+      }]
+    })
 
     const vpc = new ec2.Vpc(this, "vpc", {
       maxAzs: 99,
@@ -45,8 +53,8 @@ export class McStack extends cdk.Stack {
 
     const taskDefinition = new ecs.TaskDefinition(this, "mc-task", {
       compatibility: Compatibility.FARGATE,
-      cpu: "" + 2 * 1024,
-      memoryMiB: "" + 4 * 1024
+      cpu: cpu.valueAsString,
+      memoryMiB: memoryMiB.valueAsString
     });
 
     taskDefinition.addToTaskRolePolicy(new PolicyStatement({
@@ -108,6 +116,7 @@ export class McStack extends cdk.Stack {
     });
 
     const cfnService = mcService.node.children[0] as CfnService;
+    cfnService.launchType = undefined
     cfnService.capacityProviderStrategy = [{
       capacityProvider: "FARGATE_SPOT",
       weight: 1000
@@ -147,14 +156,5 @@ export class McStack extends cdk.Stack {
     new CfnOutput(this, "serverBucketOutput", {
       value: bucket.bucketName
     })
-  }
-
-  private getServerBucket(serverBucketName: CfnParameter) {
-    const bucketId = "mcBucket";
-    if (serverBucketName.valueAsString == "") {
-      return new Bucket(this, bucketId)
-    } else {
-      return Bucket.fromBucketName(this, bucketId, serverBucketName.valueAsString);
-    }
   }
 }
