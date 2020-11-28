@@ -146,8 +146,8 @@ export class McStack extends cdk.Stack {
     }))
     startServerLambda.addToRolePolicy(new PolicyStatement({
       effect: Effect.ALLOW,
-      actions: ["s3:*"],
-      resources: ["*"]
+      actions: ["s3:ListBucket"],
+      resources: [bucket.bucketArn]
     }))
 
     const api = new RestApi(this, "mc-management-api");
