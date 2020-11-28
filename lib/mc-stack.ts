@@ -85,7 +85,8 @@ export class McStack extends cdk.Stack {
       },
       logging: LogDriver.awsLogs({
         streamPrefix: "mc-logs"
-      })
+      }),
+      stopTimeout: cdk.Duration.seconds(120)
     });
     containerDefinition.addPortMappings({
       containerPort: 25565

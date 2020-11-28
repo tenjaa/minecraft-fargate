@@ -15,8 +15,8 @@ RUN java -jar forge-installer.jar --installServer && \
 WORKDIR /
 COPY --from=builder aws aws
 RUN ./aws/install && rm -rf aws
-COPY --from=builder scripts scripts
 RUN curl -o jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -L && \
     chmod +x jq && \
     mv jq /bin
+COPY --from=builder scripts scripts
 CMD ["scripts/wrapper.sh"]
