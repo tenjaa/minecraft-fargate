@@ -59,13 +59,16 @@ export class McStack extends cdk.Stack {
 
     taskDefinition.addToTaskRolePolicy(new PolicyStatement({
       effect: Effect.ALLOW,
-      actions: ["s3:*"],
-      resources: ["*"]
+      actions: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+      resources: [bucket.bucketArn, bucket.bucketArn + "/*"]
     }))
     taskDefinition.addToTaskRolePolicy(new PolicyStatement({
       effect: Effect.ALLOW,
       actions: ["ecs:DescribeTasks"],
-      resources: ["*"]
+      resources: [this.formatArn({
+        service: "ecs",
+        resource: "task"
+      }) + "/*"]
     }))
     taskDefinition.addToTaskRolePolicy(new PolicyStatement({
       effect: Effect.ALLOW,
@@ -75,7 +78,8 @@ export class McStack extends cdk.Stack {
     taskDefinition.addToTaskRolePolicy(new PolicyStatement({
       effect: Effect.ALLOW,
       actions: ["ecs:ListServices"],
-      resources: ["*"]
+      resources: ["*"],
+      conditions: {ArnEquals: {"ecs:cluster": cluster.clusterArn}}
     }))
 
     const asset = new DockerImageAsset(this, 'mcImage', {
@@ -125,7 +129,8 @@ export class McStack extends cdk.Stack {
     taskDefinition.addToTaskRolePolicy(new PolicyStatement({
       effect: Effect.ALLOW,
       actions: ["ecs:UpdateService"],
-      resources: [mcService.serviceArn]
+      resources: [mcService.serviceArn],
+      conditions: {ArnEquals: {"ecs:cluster": cluster.clusterArn}}
     }))
 
     const startServerLambda = new Function(this, "mc-start-server", {
