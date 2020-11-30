@@ -1,0 +1,7 @@
+[Unit]
+Description=minecraft reads commands from this
+
+[Socket]
+SocketUser=ec2-user
+Service=minecraft.service
+ListenFIFO=/tmp/minecraft.stdin

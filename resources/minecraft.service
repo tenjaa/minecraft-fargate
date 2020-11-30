@@ -1,0 +1,11 @@
+[Unit]
+Description=Minecraft Server
+
+[Service]
+ExecStart=/bin/bash /home/ec2-user/scripts/wrapper.sh
+User=ec2-user
+WorkingDirectory=/home/ec2-user
+StandardInput=tty-fail
+TTYPath=/home/ec2-user/minecraft.stdin
+
+[Install]

@@ -2,7 +2,7 @@
 set -e
 
 echo "Download world"
-./scripts/sync-s3.sh s3://"${BUCKET}" minecraft
+"$SCRIPTS_DIR"/sync-s3.sh s3://"${BUCKET}" "$MAIN_DIR"/minecraft
 
 echo "Update IP"
 #taskMetadata=$(curl -s "${ECS_CONTAINER_METADATA_URI_V4}/task")
