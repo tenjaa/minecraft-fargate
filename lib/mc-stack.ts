@@ -17,10 +17,10 @@ export class McStack extends cdk.Stack {
     super(scope, id, props);
 
     const cpu = new CfnParameter(this, "cpu", {
-      default: 512
+      default: 2048
     });
     const memoryMiB = new CfnParameter(this, "memoryMiB", {
-      default: 1024
+      default: 4096
     });
     const duckDnsSubDomain = new CfnParameter(this, "duckDnsSubDomain");
     const duckDnsToken = Secret.fromSecretNameV2(this, "duckDnsToken", "mcDuckDnsToken");
