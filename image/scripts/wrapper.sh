@@ -3,9 +3,9 @@ set -e
 
 exit_script() {
     echo "FOUND SIGTERM!"
-    echo "/stop" > /tmp/srv-input &
+    echo "/stop" > /tmp/mc-stdin &
     tail --pid="$minecraftPid" -f /dev/null
-    ./scripts/sync-s3.sh minecraft s3://"${BUCKET}"
+    ./scripts/backup.sh
     exit 0
 }
 
@@ -16,29 +16,35 @@ trap exit_script SIGTERM
 echo "Start server"
 cd minecraft
 # https://serverfault.com/questions/188936/writing-to-stdin-of-background-process
-mkfifo /tmp/srv-input
-tail -f /tmp/srv-input | java -jar forge-*.jar &
+mkfifo /tmp/mc-stdin
+tail -f /tmp/mc-stdin | java -XX:MaxRAMPercentage=75.0 -jar forge-*.jar &
 minecraftPid=$!
 cd ..
 
 # Wait for server to start
-sleep 5m
-echo "/save-on" > /tmp/srv-input &
+echo "Server starting! Waiting 10m for someone to join"
+echo "/op ${OP_USERNAME}" > /tmp/mc-stdin &
+sleep 10m & wait $!
 
-while true; do
-  for i in $(seq 1 10);
-  do
-    sleep 2m & wait $!
-    players=$(curl -s "https://mcapi.xdefcon.com/server/${PUBLIC_IP}/players/json" | jq '.players')
-    if [ "$players" = 0 ]; then
-      break
-    fi
-  done
-  ./scripts/backup.sh
+players=1
+minutes=1
+while [[ "$players" != 0 ]]; do
+  echo "Get players"
   players=$(curl -s "https://mcapi.xdefcon.com/server/${PUBLIC_IP}/players/json" | jq '.players')
-  if [ "$players" = 0 ]; then
-    break
+  echo "Players: $players"
+  if [ $((minutes % 60)) = 0 ]; then
+    echo "Starting backup"
+    ./scripts/backup-wrapper.sh
+    echo "Backup done"
   fi
+  sleep 1m & wait $!
+  minutes=$((minutes+1))
 done
 
+echo "Starting shutdown"
 ./scripts/shutdown.sh
+
+while true; do
+  echo "Waiting for shutdown"
+  sleep 1m & wait $!
+done

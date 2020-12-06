@@ -1,19 +1,8 @@
 #!/bin/sh
 set -e
 
-echo "Start backup"
-echo "/say starting-backup" > /tmp/srv-input &
-
-# Disable auto-save for reliable backup
-echo "Disable auto-save"
-echo "/save-off" > /tmp/srv-input &
-echo "/save-all" > /tmp/srv-input &
-sleep 30s
-
+echo "Start backup.sh"
 cp -r minecraft minecraft-backup
-./scripts/sync-s3.sh minecraft-backup s3://"${BUCKET}"
+tar -C minecraft-backup -c config defaultconfigs world ops.json whitelist.json server.properties | aws s3 cp - s3://"${BUCKET}"/backup.tar --no-progress
 rm -rf minecraft-backup
-
-echo "/save-on" > /tmp/srv-input &
-echo "Backup done"
-echo "/say backup-done" > /tmp/srv-input &
+echo "End backup.sh"

@@ -1,19 +1,22 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-echo "Download world"
-./scripts/sync-s3.sh s3://"${BUCKET}" minecraft
+echo "Download backup"
+if [[ $(aws s3 ls s3://"${BUCKET}"/backup.tar | wc -l) = 1 ]]; then
+  echo "Backup found"
+  aws s3 cp s3://"${BUCKET}"/backup.tar - --no-progress | tar -C minecraft -x
+fi
+
+echo "Download mods"
+if [[ $(aws s3 ls s3://"${BUCKET}"/mods | wc -l) = 1 ]]; then
+  echo "Mods found"
+  aws s3 cp s3://"${BUCKET}"/mods minecraft/mods --recursive --no-progress
+fi
+
+echo "Get IP"
+publicIp=$(curl -s "https://checkip.amazonaws.com/")
 
 echo "Update IP"
-taskMetadata=$(curl -s "${ECS_CONTAINER_METADATA_URI_V4}/task")
-clusterArn=$(echo "$taskMetadata" | jq -r '.Cluster')
-taskArn=$(echo "$taskMetadata" | jq -r '.TaskARN')
-taskDescription=$(aws ecs describe-tasks --cluster "$clusterArn" --tasks "$taskArn")
-networkInterfaceId=$(echo "$taskDescription" | jq -r '.tasks[].attachments[].details[] | select(.name=="networkInterfaceId").value')
-networkInterfaceDescription=$(aws ec2 describe-network-interfaces --network-interface-ids "$networkInterfaceId")
-publicIp=$(echo "$networkInterfaceDescription" | jq -r '.NetworkInterfaces[].Association.PublicIp')
-
-curl "https://www.duckdns.org/update?domains=$DUCK_DNS_DOMAIN&token=$DUCK_DNS_TOKEN&ip=$publicIp"
+curl -s "https://www.duckdns.org/update?domains=$DUCK_DNS_DOMAIN&token=$DUCK_DNS_TOKEN&ip=$publicIp"
 
 export PUBLIC_IP=$publicIp
-export CLUSTER_ARN=$clusterArn
