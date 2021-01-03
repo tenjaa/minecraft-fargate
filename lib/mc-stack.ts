@@ -8,11 +8,12 @@ import {Effect, PolicyStatement} from '@aws-cdk/aws-iam';
 import {BlockPublicAccess, Bucket} from '@aws-cdk/aws-s3';
 import {Code, Function, Runtime} from '@aws-cdk/aws-lambda';
 import {LambdaIntegration, RestApi} from '@aws-cdk/aws-apigateway';
-import {Secret} from '@aws-cdk/aws-secretsmanager';
 import {DockerImageAsset} from '@aws-cdk/aws-ecr-assets';
 import * as path from 'path';
 import {AutoScalingGroup} from '@aws-cdk/aws-autoscaling';
 import {RetentionDays} from '@aws-cdk/aws-logs';
+import {IParameter, StringParameter} from '@aws-cdk/aws-ssm';
+import * as ssm from '@aws-cdk/aws-ssm';
 
 export class McStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -20,7 +21,10 @@ export class McStack extends cdk.Stack {
 
     const opUsername = new CfnParameter(this, "opUsername");
     const duckDnsSubDomain = new CfnParameter(this, "duckDnsSubDomain");
-    const duckDnsToken = Secret.fromSecretNameV2(this, "duckDnsToken", "mcDuckDnsToken");
+    const duckDnsToken: ssm.IParameter = StringParameter.fromSecureStringParameterAttributes(this, "duckDnsToken", {
+      parameterName: "duckDnsToken",
+      version: 1
+    });
 
     const bucket = new Bucket(this, "serverDataBucket", {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
@@ -104,7 +108,7 @@ export class McStack extends cdk.Stack {
         OP_USERNAME: opUsername.valueAsString
       },
       secrets: {
-        DUCK_DNS_TOKEN: ecs.Secret.fromSecretsManager(duckDnsToken)
+        DUCK_DNS_TOKEN: ecs.Secret.fromSsmParameter(duckDnsToken)
       },
       logging: LogDriver.awsLogs({
         streamPrefix: "mc-logs",
