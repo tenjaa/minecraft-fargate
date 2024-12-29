@@ -7,10 +7,11 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "test": "jest",
+    "fmt": "npx @biomejs/biome check --write",
     "cdk": "cdk"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@types/node": "22.7.9",
     "aws-cdk": "2.173.4",
     "ts-node": "10.9.2",
@@ -18,6 +19,9 @@
     "typescript": "5.6.3"
   },
   "dependencies": {
+    "@aws-sdk/client-auto-scaling": "^3.716.0",
+    "@aws-sdk/client-ecs": "^3.716.0",
+    "@aws-sdk/client-s3": "^3.717.0",
     "aws-cdk-lib": "2.173.4",
     "constructs": "10.0.0"
   }
