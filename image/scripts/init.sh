@@ -15,6 +15,7 @@ fi
 
 echo "Get IP"
 publicIp=$(curl -s "https://checkip.amazonaws.com/")
+echo "IPv4: $publicIp"
 
 echo "Update IP"
 curl -s "https://www.duckdns.org/update?domains=$DUCK_DNS_DOMAIN&token=$DUCK_DNS_TOKEN&ip=$publicIp"

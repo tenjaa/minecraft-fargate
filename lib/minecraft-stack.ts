@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
-import { CfnOutput, CfnParameter } from "aws-cdk-lib";
+import { CfnParameter } from "aws-cdk-lib";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
@@ -65,18 +65,15 @@ export class MinecraftStack extends cdk.Stack {
 
     const cluster = new ecs.Cluster(this, "mc-cluster", {
       vpc: vpc,
-      capacity: {
-        instanceType: InstanceType.of(InstanceClass.T4G, InstanceSize.SMALL),
-        desiredCapacity: 0,
-        minCapacity: 0,
-        maxCapacity: 1,
-        machineImage: ecs.EcsOptimizedImage.amazonLinux2(
-          ecs.AmiHardwareType.ARM,
-        ),
-      },
     });
-
-    const autoScalingGroup = cluster.autoscalingGroup!;
+    const autoScalingGroup = cluster.addCapacity("DefaultAutoScalingGroup", {
+      instanceType: InstanceType.of(InstanceClass.T4G, InstanceSize.SMALL),
+      desiredCapacity: 0,
+      minCapacity: 0,
+      maxCapacity: 1,
+      machineImage: ecs.EcsOptimizedImage.amazonLinux2(ecs.AmiHardwareType.ARM),
+    });
+    autoScalingGroup.addSecurityGroup(securityGroup);
 
     const taskDefinition = new Ec2TaskDefinition(this, "taskDefinition", {
       networkMode: NetworkMode.HOST,
@@ -206,12 +203,15 @@ export class MinecraftStack extends cdk.Stack {
         resources: ["*"],
       }),
     );
+    startServerLambda.addToRolePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ["ec2:DescribeInstances"],
+        resources: ["*"],
+      }),
+    );
 
     const api = new RestApi(this, "mc-management-api");
     api.root.addMethod("GET", new LambdaIntegration(startServerLambda));
-
-    new CfnOutput(this, "mc-management-api-url", {
-      value: api.url,
-    });
   }
 }

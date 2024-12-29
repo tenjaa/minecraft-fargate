@@ -3,10 +3,12 @@ import { ECSClient } from "@aws-sdk/client-ecs";
 import { S3Client } from "@aws-sdk/client-s3";
 import { loadStrict } from "./env";
 import { StartServer } from "./start-server";
+import {EC2Client} from "@aws-sdk/client-ec2";
 
 const autoScalingClient = new AutoScalingClient();
 const ecsClient = new ECSClient();
 const s3Client = new S3Client();
+const ec2Client = new EC2Client();
 
 const props = {
   bucket: loadStrict("BUCKET"),
@@ -20,5 +22,6 @@ export const handler = new StartServer(
   autoScalingClient,
   ecsClient,
   s3Client,
+  ec2Client,
   props,
 ).handler;

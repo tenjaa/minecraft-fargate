@@ -3,6 +3,7 @@ import {
   DescribeAutoScalingGroupsCommand,
   SetDesiredCapacityCommand,
 } from "@aws-sdk/client-auto-scaling";
+import { DescribeInstancesCommand, type EC2Client } from "@aws-sdk/client-ec2";
 import {
   DescribeServicesCommand,
   type ECSClient,
@@ -23,6 +24,7 @@ export class StartServer {
     private readonly autoScaling: AutoScalingClient,
     private readonly ecs: ECSClient,
     private readonly s3: S3Client,
+    private readonly ec2: EC2Client,
     private readonly props: Props,
   ) {}
 
@@ -35,9 +37,10 @@ export class StartServer {
       const serviceState = await this.getServiceState();
 
       const body = `
-      ${this.props.duckDnsDomain}.duckdns.org
+      Server address: ${this.props.duckDnsDomain}.duckdns.org
+      Server IP: ${ec2State.ip}
       Mods used: [${modList}]
-      EC2 state: ${ec2State} (InService is good)
+      EC2 state: ${ec2State.state} (InService is good)
       MC state: ${serviceState} (Pending: 0, Running: 1 is good and means the server is starting right now, wich can take up to five minutes)
       Refresh this page every 30 seconds until everything works.
       `;
@@ -102,9 +105,19 @@ export class StartServer {
       response.AutoScalingGroups?.[0]?.Instances &&
       response.AutoScalingGroups[0].Instances.length > 0
     ) {
-      return response.AutoScalingGroups[0].Instances[0].LifecycleState;
+      const ipResponse = await this.ec2.send(
+        new DescribeInstancesCommand({
+          InstanceIds: [response.AutoScalingGroups[0].Instances[0].InstanceId!],
+        }),
+      );
+      const publicIpAddress =
+        ipResponse.Reservations?.[0].Instances?.[0].PublicIpAddress;
+      return {
+        state: response.AutoScalingGroups[0].Instances[0].LifecycleState,
+        ip: publicIpAddress,
+      };
     }
-    return "Waiting for EC2 instance...";
+    return { stage: "Waiting for EC2 instance...", ip: undefined };
   }
 
   async getServiceState() {
