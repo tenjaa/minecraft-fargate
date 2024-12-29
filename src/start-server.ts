@@ -144,8 +144,14 @@ export class StartServer {
     if (!modList) {
       return "Error loading mods! Please contact admin";
     }
-    const serverMods = modList.filter(x => x.startsWith("server/")).map(x => x.replace("server/", "")).filter(x => x !== "");
-    const clientMods = modList.filter(x => x.startsWith("client/")).map(x => x.replace("client/", "")).filter(x => x !== "");
+    const serverMods = modList
+      .filter((x) => x.startsWith("server/"))
+      .map((x) => x.replace("server/", ""))
+      .filter((x) => x !== "");
+    const clientMods = modList
+      .filter((x) => x.startsWith("client/"))
+      .map((x) => x.replace("client/", ""))
+      .filter((x) => x !== "");
 
     let formattedList = "Mods:<br />";
     formattedList = `${formattedList}Client mods (These must be downloaded by you!):<br />`;

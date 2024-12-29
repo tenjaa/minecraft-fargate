@@ -162,6 +162,7 @@ export class MinecraftStack extends cdk.Stack {
     );
 
     const startServerLambda = new NodejsFunction(this, "mc-start-server", {
+      functionName: "start-server",
       entry: path.join(__dirname, "..", "src", "start-server.handler.ts"),
       runtime: lambda.Runtime.NODEJS_22_X,
       environment: {
