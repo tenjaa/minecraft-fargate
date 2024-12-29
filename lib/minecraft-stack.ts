@@ -20,6 +20,10 @@ import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import type * as ssm from "aws-cdk-lib/aws-ssm";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
+import {HttpApi, HttpMethod} from "aws-cdk-lib/aws-apigatewayv2";
+import {HttpUserPoolAuthorizer} from "aws-cdk-lib/aws-apigatewayv2-authorizers";
+import {UserPool} from "aws-cdk-lib/aws-cognito";
+import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 
 export class MinecraftStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -215,11 +219,19 @@ export class MinecraftStack extends cdk.Stack {
     );
     bucket.grantRead(startServerLambda, "mods/*");
 
-    const api = new RestApi(this, "mc-management-api", {
-      defaultCorsPreflightOptions: {
-        allowOrigins: Cors.ALL_ORIGINS,
+    const userPool = new UserPool(this, "UserPool", {});
+
+    const httpApi = new HttpApi(this, "Api", {
+      corsPreflight: {
+        allowOrigins: ['*'],
       },
+      defaultAuthorizer: new HttpUserPoolAuthorizer('Authorizer', userPool)
     });
-    api.root.addMethod("GET", new LambdaIntegration(startServerLambda));
+
+    httpApi.addRoutes({
+      methods: [HttpMethod.POST],
+      path: '/',
+      integration: new HttpLambdaIntegration('LambdaIntegration', startServerLambda),
+    });
   }
 }
