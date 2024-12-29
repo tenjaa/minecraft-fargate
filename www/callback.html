@@ -2,21 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Testing login</title>
+    <title>Callback</title>
 </head>
 <body>
-<div>
-    <button id="signIn">Sign In</button>
-</div>
-
-<script type="module">
-    import { userManager } from "./main.js";
-
-    document.getElementById("signIn").addEventListener("click", async () => {
-        await userManager.signinRedirect();
-    });
-</script>
-
 <div>
     Hello: <pre id="email"></pre>
     Access token: <pre id="access-token"></pre>

@@ -27,6 +27,7 @@
     "@aws-sdk/client-s3": "^3.717.0",
     "@aws-sdk/s3-request-presigner": "^3.717.0",
     "aws-cdk-lib": "2.173.4",
-    "constructs": "10.0.0"
+    "constructs": "10.0.0",
+    "oidc-client-ts": "^3.1.0"
   }
 }
