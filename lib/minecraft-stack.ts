@@ -1,7 +1,14 @@
 import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import { CfnParameter, Duration } from "aws-cdk-lib";
-import { Cors, LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
+import {
+  CorsHttpMethod,
+  HttpApi,
+  HttpMethod,
+} from "aws-cdk-lib/aws-apigatewayv2";
+import { HttpUserPoolAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
+import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import {OAuthScope, UserPool} from "aws-cdk-lib/aws-cognito";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
 import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
@@ -20,10 +27,6 @@ import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import type * as ssm from "aws-cdk-lib/aws-ssm";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
-import {HttpApi, HttpMethod} from "aws-cdk-lib/aws-apigatewayv2";
-import {HttpUserPoolAuthorizer} from "aws-cdk-lib/aws-apigatewayv2-authorizers";
-import {UserPool} from "aws-cdk-lib/aws-cognito";
-import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 
 export class MinecraftStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -219,19 +222,59 @@ export class MinecraftStack extends cdk.Stack {
     );
     bucket.grantRead(startServerLambda, "mods/*");
 
-    const userPool = new UserPool(this, "UserPool", {});
+    const userPool = new UserPool(this, "UserPool4", {
+      standardAttributes: {
+        email: {
+          required: true,
+          mutable: false,
+        },
+      },
+      signInAliases: {
+        username: false,
+        email: true,
+        phone: false,
+        preferredUsername: false,
+      }
+    });
+    userPool.addDomain("CognitoDomain", {
+      cognitoDomain: {
+        domainPrefix: "tenjaa-mc4",
+      },
+    });
+    const userPoolClient = userPool.addClient("Client", {
+      oAuth: {
+        callbackUrls: ["https://tenjaa.github.io/minecraft-fargate/callback"],
+        scopes: [OAuthScope.EMAIL,],
+        flows: {
+          implicitCodeGrant: true,
+          authorizationCodeGrant: false,
+          clientCredentials: false,
+        }
+      },
+      authFlows: {
+        user: true,
+      }
+    });
 
     const httpApi = new HttpApi(this, "Api", {
       corsPreflight: {
-        allowOrigins: ['*'],
+        allowHeaders: ["Authorization"],
+        allowOrigins: ["*"],
+        allowMethods: [CorsHttpMethod.ANY],
+        maxAge: Duration.days(10),
       },
-      defaultAuthorizer: new HttpUserPoolAuthorizer('Authorizer', userPool)
+      defaultAuthorizer: new HttpUserPoolAuthorizer("Authorizer", userPool, {
+        userPoolClients: [userPoolClient],
+      }),
     });
 
     httpApi.addRoutes({
       methods: [HttpMethod.POST],
-      path: '/',
-      integration: new HttpLambdaIntegration('LambdaIntegration', startServerLambda),
+      path: "/",
+      integration: new HttpLambdaIntegration(
+        "LambdaIntegration",
+        startServerLambda,
+      ),
     });
   }
 }
