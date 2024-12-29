@@ -2,7 +2,6 @@ import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import { CfnOutput, CfnParameter } from "aws-cdk-lib";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
-import { AutoScalingGroup } from "aws-cdk-lib/aws-autoscaling";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
 import { DockerImageAsset } from "aws-cdk-lib/aws-ecr-assets";
@@ -10,7 +9,6 @@ import * as ecs from "aws-cdk-lib/aws-ecs";
 import {
   ContainerImage,
   Ec2TaskDefinition,
-  EcsOptimizedImage,
   LogDriver,
   NetworkMode,
 } from "aws-cdk-lib/aws-ecs";
@@ -22,8 +20,6 @@ import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import type * as ssm from "aws-cdk-lib/aws-ssm";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
-
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class McStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -67,29 +63,16 @@ export class McStack extends cdk.Stack {
     });
     securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(25565));
 
-    const autoScalingGroup = new AutoScalingGroup(this, "asg", {
-      instanceType: InstanceType.of(InstanceClass.T3A, InstanceSize.SMALL),
-      machineImage: EcsOptimizedImage.amazonLinux2(),
-      vpc: vpc,
-      minCapacity: 0,
-      desiredCapacity: 0,
-      maxCapacity: 1,
-      securityGroup: securityGroup,
-      spotPrice: "0.02",
-    });
-
     const cluster = new ecs.Cluster(this, "mc-cluster", {
       vpc: vpc,
+      capacity: {
+        instanceType: InstanceType.of(InstanceClass.T4G, InstanceSize.SMALL),
+        desiredCapacity: 0,
+        maxCapacity: 1,
+      },
     });
 
-    const capacityProvider = new ecs.AsgCapacityProvider(
-      this,
-      "AsgCapacityProvider",
-      {
-        autoScalingGroup,
-      },
-    );
-    cluster.addAsgCapacityProvider(capacityProvider);
+    const autoScalingGroup = cluster.autoscalingGroup!;
 
     const taskDefinition = new Ec2TaskDefinition(this, "taskDefinition", {
       networkMode: NetworkMode.HOST,

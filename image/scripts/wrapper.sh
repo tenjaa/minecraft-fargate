@@ -17,7 +17,7 @@ echo "Start server"
 cd minecraft
 # https://serverfault.com/questions/188936/writing-to-stdin-of-background-process
 mkfifo /tmp/mc-stdin
-tail -f /tmp/mc-stdin | java -XX:MaxRAMPercentage=75.0 -jar forge-*.jar &
+tail -f /tmp/mc-stdin | ./run.sh &
 minecraftPid=$!
 cd ..
 
