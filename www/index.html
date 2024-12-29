@@ -1,39 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Testing login</title>
+    <meta charset="UTF-8" />
+    <title>Read ID Token and Fetch HTML</title>
 </head>
 <body>
-<div>
-    <button id="signIn">Sign In</button>
-</div>
+<h1>Read ID Token & Display Fetched HTML</h1>
 
-<script type="module">
-    import { userManager } from "./main.js";
+<p><strong>ID Token:</strong></p>
+<div id="token-output" style="margin-bottom: 1rem; color: blue;"></div>
 
-    document.getElementById("signIn").addEventListener("click", async () => {
-        await userManager.signinRedirect();
-    });
+<p><strong>Fetched HTML:</strong></p>
+<div id="api-result" style="border: 1px solid #ccc; padding: 1rem;"></div>
+
+<script>
+    // 1. Capture the URL hash part (everything after '#')
+    const hash = window.location.hash;
+
+    // 2. Remove the leading '#' and parse the hash as query parameters
+    const params = new URLSearchParams(hash.substring(1));
+
+    // 3. Retrieve the 'id_token' parameter
+    const idToken = params.get("id_token");
+
+    // 4. Display the token (for demonstration)
+    const tokenOutputDiv = document.getElementById("token-output");
+    if (idToken) {
+        tokenOutputDiv.textContent = idToken;
+    } else {
+        tokenOutputDiv.textContent = "No id_token found in the URL hash.";
+    }
+
+    // 5. If we have an ID token, call the API with the Bearer token
+    if (idToken) {
+        fetch("https://s54lv7w4xg.execute-api.eu-central-1.amazonaws.com/prod/", {
+            method: "GET",
+            headers: {
+                "Authorization": "Bearer " + idToken
+            }
+        })
+            .then((response) => {
+                // Convert the response to text because it returns HTML
+                return response.text();
+            })
+            .then((html) => {
+                // 6. Display the returned HTML in #api-result
+                document.getElementById("api-result").innerHTML = html;
+            })
+            .catch((error) => {
+                console.error("Error fetching API:", error);
+                document.getElementById("api-result").textContent = "Error: " + error;
+            });
+    }
 </script>
-
-<div>
-    Hello: <pre id="email"></pre>
-    Access token: <pre id="access-token"></pre>
-    ID token: <pre id="id-token"></pre>
-    Refresh token: <pre id="refresh-token"></pre>
-</div>
-
-<script type="module">
-    import { userManager } from "./main.js";
-
-    userManager.signinCallback().then(function (user) {
-        document.getElementById("email").textContent = user.profile?.email;
-        document.getElementById("access-token").textContent = user.access_token;
-        document.getElementById("id-token").textContent = user.id_token;
-        document.getElementById("refresh-token").textContent = user.refresh_token;
-    });
-</script>
-
 </body>
 </html>
