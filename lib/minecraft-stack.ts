@@ -4,7 +4,7 @@ import { CfnOutput, CfnParameter } from "aws-cdk-lib";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
-import { DockerImageAsset } from "aws-cdk-lib/aws-ecr-assets";
+import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import {
   ContainerImage,
@@ -14,14 +14,14 @@ import {
 } from "aws-cdk-lib/aws-ecs";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { Code } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import type * as ssm from "aws-cdk-lib/aws-ssm";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
 
-export class McStack extends cdk.Stack {
+export class MinecraftStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -68,7 +68,11 @@ export class McStack extends cdk.Stack {
       capacity: {
         instanceType: InstanceType.of(InstanceClass.T4G, InstanceSize.SMALL),
         desiredCapacity: 0,
+        minCapacity: 0,
         maxCapacity: 1,
+        machineImage: ecs.EcsOptimizedImage.amazonLinux2(
+          ecs.AmiHardwareType.ARM,
+        ),
       },
     });
 
@@ -113,8 +117,10 @@ export class McStack extends cdk.Stack {
       }),
     );
 
-    const asset = new DockerImageAsset(this, "mcImage", {
+    const asset = new DockerImageAsset(this, "Image", {
+      assetName: "minecraft",
       directory: path.join(__dirname, "..", "image"),
+      platform: Platform.LINUX_ARM64,
     });
 
     const containerDefinition = taskDefinition.addContainer("container", {
@@ -153,15 +159,14 @@ export class McStack extends cdk.Stack {
       new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ["ecs:UpdateService"],
-        resources: [mcService.serviceArn],
+        resources: ["*"],
         conditions: { ArnEquals: { "ecs:cluster": cluster.clusterArn } },
       }),
     );
 
-    const startServerLambda = new lambda.Function(this, "mc-start-server", {
-      handler: "startServer.handler",
+    const startServerLambda = new NodejsFunction(this, "mc-start-server", {
+      entry: path.join(__dirname, "..", "src", "start-server.handler.ts"),
       runtime: lambda.Runtime.NODEJS_22_X,
-      code: Code.fromAsset("src"),
       environment: {
         BUCKET: bucket.bucketName,
         DUCK_DNS_DOMAIN: duckDnsSubDomain.valueAsString,
@@ -169,6 +174,7 @@ export class McStack extends cdk.Stack {
         MC_SERVICE: mcService.serviceArn,
         ASG: autoScalingGroup.autoScalingGroupName,
       },
+      architecture: lambda.Architecture.ARM_64,
       logRetention: RetentionDays.ONE_WEEK,
     });
     startServerLambda.addToRolePolicy(
@@ -204,8 +210,8 @@ export class McStack extends cdk.Stack {
     const api = new RestApi(this, "mc-management-api");
     api.root.addMethod("GET", new LambdaIntegration(startServerLambda));
 
-    new CfnOutput(this, "serverBucketOutput", {
-      value: bucket.bucketName,
+    new CfnOutput(this, "mc-management-api-url", {
+      value: api.url,
     });
   }
 }

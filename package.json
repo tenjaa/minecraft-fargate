@@ -14,11 +14,13 @@
     "@biomejs/biome": "1.9.4",
     "@types/node": "22.7.9",
     "aws-cdk": "2.173.4",
+    "esbuild": "^0.24.2",
     "ts-node": "10.9.2",
     "tsx": "^4.19.2",
     "typescript": "5.6.3"
   },
   "dependencies": {
+    "@aws-cdk/app-staging-synthesizer-alpha": "^2.173.4-alpha.0",
     "@aws-sdk/client-auto-scaling": "^3.716.0",
     "@aws-sdk/client-ecs": "^3.716.0",
     "@aws-sdk/client-s3": "^3.717.0",

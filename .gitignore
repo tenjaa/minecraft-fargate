@@ -8,3 +8,4 @@ node_modules
 cdk.out
 
 /.idea/
+cdk.context.json
