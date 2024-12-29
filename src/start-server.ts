@@ -58,6 +58,7 @@ export class StartServer {
         statusCode: 200,
         headers: {
           "Content-Type": "text/html",
+          "access-control-allow-origin": "*",
         },
         body: body,
       };

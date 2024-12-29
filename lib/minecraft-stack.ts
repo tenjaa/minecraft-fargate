@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import { CfnParameter, Duration } from "aws-cdk-lib";
-import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
+import { Cors, LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
 import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
@@ -215,7 +215,11 @@ export class MinecraftStack extends cdk.Stack {
     );
     bucket.grantRead(startServerLambda, "mods/*");
 
-    const api = new RestApi(this, "mc-management-api");
+    const api = new RestApi(this, "mc-management-api", {
+      defaultCorsPreflightOptions: {
+        allowOrigins: Cors.ALL_ORIGINS,
+      },
+    });
     api.root.addMethod("GET", new LambdaIntegration(startServerLambda));
   }
 }
