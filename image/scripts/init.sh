@@ -8,9 +8,14 @@ if [[ $(aws s3 ls s3://"${BUCKET}"/backup.tar | wc -l) = 1 ]]; then
 fi
 
 echo "Download mods"
-if [[ $(aws s3 ls s3://"${BUCKET}"/mods | wc -l) = 1 ]]; then
-  echo "Mods found"
-  aws s3 cp s3://"${BUCKET}"/mods minecraft/mods --recursive --no-progress
+if [[ $(aws s3 ls s3://"${BUCKET}"/mods/server | wc -l) = 1 ]]; then
+  echo "Server mods found"
+  aws s3 cp s3://"${BUCKET}"/mods/server minecraft/mods --recursive --no-progress
+fi
+
+if [[ $(aws s3 ls s3://"${BUCKET}"/mods/client | wc -l) = 1 ]]; then
+  echo "Client mods found"
+  aws s3 cp s3://"${BUCKET}"/mods/client minecraft/mods --recursive --no-progress
 fi
 
 echo "Get IP"

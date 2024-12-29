@@ -9,7 +9,12 @@ import {
   type ECSClient,
   UpdateServiceCommand,
 } from "@aws-sdk/client-ecs";
-import { ListObjectsV2Command, type S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  ListObjectsV2Command,
+  type S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 interface Props {
   bucket: string;
@@ -35,20 +40,24 @@ export class StartServer {
       const modList = await this.listMods();
       const ec2State = await this.getEc2State();
       const serviceState = await this.getServiceState();
+      const formattedModList = await this.formatMods(modList);
 
       const body = `
-      Server address: ${this.props.duckDnsDomain}.duckdns.org
-      Server IP: ${ec2State.ip}
-      Mods used: [${modList}]
-      EC2 state: ${ec2State.state} (InService is good)
-      MC state: ${serviceState} (Pending: 0, Running: 1 is good and means the server is starting right now, wich can take up to five minutes)
+      Server address: ${this.props.duckDnsDomain}.duckdns.org<br />
+      Server IP: ${ec2State.ip}<br />
+      <br />
+      ${formattedModList}
+      <br />
+      EC2 state: ${ec2State.state} (InService is good)<br />
+      MC state: ${serviceState} (Pending: 0, Running: 1 is good and means the server is starting right now, wich can take up to five minutes)<br />
+      <br />
       Refresh this page every 30 seconds until everything works.
       `;
 
       return {
         statusCode: 200,
         headers: {
-          "Content-Type": "text/plain",
+          "Content-Type": "text/html",
         },
         body: body,
       };
@@ -85,14 +94,13 @@ export class StartServer {
     const response = await this.s3.send(
       new ListObjectsV2Command({
         Bucket: this.props.bucket,
-        Prefix: "mods",
+        Prefix: "mods/",
       }),
     );
     return response.Contents?.map((x) => x.Key)
       .filter((x) => x !== undefined)
       .map((s: string) => s.replace("mods/", ""))
-      .filter((s: string) => s !== "")
-      .join();
+      .filter((s: string) => s !== "");
   }
 
   async getEc2State() {
@@ -130,5 +138,34 @@ export class StartServer {
     const pendingCount = response.services?.[0].pendingCount;
     const runningCount = response.services?.[0].runningCount;
     return `Pending: ${pendingCount}, Running: ${runningCount}`;
+  }
+
+  private async formatMods(modList: string[] | undefined) {
+    if (!modList) {
+      return "Error loading mods! Please contact admin";
+    }
+    const serverMods = modList.filter(x => x.startsWith("server/")).map(x => x.replace("server/", "")).filter(x => x !== "");
+    const clientMods = modList.filter(x => x.startsWith("client/")).map(x => x.replace("client/", "")).filter(x => x !== "");
+
+    let formattedList = "Mods:<br />";
+    formattedList = `${formattedList}Client mods (These must be downloaded by you!):<br />`;
+    for (const mod of clientMods) {
+      const signedUrl = await getSignedUrl(
+        this.s3,
+        new GetObjectCommand({
+          Bucket: this.props.bucket,
+          Key: `mods/${mod}`,
+        }),
+        {
+          expiresIn: 60 * 5,
+        },
+      );
+      formattedList = `${formattedList}- ${mod}: <a href="${signedUrl}" download>Download</a><br />`;
+    }
+    formattedList = `${formattedList}<br />Server mods (just fyi):<br />`;
+    for (const mod of serverMods) {
+      formattedList = `${formattedList}- ${mod}<br />`;
+    }
+    return formattedList;
   }
 }

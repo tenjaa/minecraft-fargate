@@ -25,6 +25,7 @@
     "@aws-sdk/client-ec2": "^3.716.0",
     "@aws-sdk/client-ecs": "^3.716.0",
     "@aws-sdk/client-s3": "^3.717.0",
+    "@aws-sdk/s3-request-presigner": "^3.717.0",
     "aws-cdk-lib": "2.173.4",
     "constructs": "10.0.0"
   }

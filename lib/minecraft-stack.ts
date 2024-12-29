@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
-import { CfnParameter } from "aws-cdk-lib";
+import { CfnParameter, Duration } from "aws-cdk-lib";
 import { LambdaIntegration, RestApi } from "aws-cdk-lib/aws-apigateway";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
@@ -173,6 +173,8 @@ export class MinecraftStack extends cdk.Stack {
       },
       architecture: lambda.Architecture.ARM_64,
       logRetention: RetentionDays.ONE_WEEK,
+      memorySize: 512,
+      timeout: Duration.seconds(10),
     });
     startServerLambda.addToRolePolicy(
       new PolicyStatement({
@@ -210,6 +212,7 @@ export class MinecraftStack extends cdk.Stack {
         resources: ["*"],
       }),
     );
+    bucket.grantRead(startServerLambda, "mods/*");
 
     const api = new RestApi(this, "mc-management-api");
     api.root.addMethod("GET", new LambdaIntegration(startServerLambda));
