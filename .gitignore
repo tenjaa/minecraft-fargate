@@ -7,7 +7,4 @@ node_modules
 .cdk.staging
 cdk.out
 
-# Parcel default cache directory
-.parcel-cache
-/cdk.context.json
 /.idea/

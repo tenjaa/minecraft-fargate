@@ -1,22 +1,26 @@
-import * as cdk from '@aws-cdk/core';
-import {CfnOutput, CfnParameter} from '@aws-cdk/core';
-import * as ec2 from "@aws-cdk/aws-ec2";
-import {InstanceClass, InstanceSize, InstanceType, SubnetType} from "@aws-cdk/aws-ec2";
-import * as ecs from "@aws-cdk/aws-ecs";
-import {ContainerImage, Ec2TaskDefinition, EcsOptimizedImage, LogDriver, NetworkMode} from "@aws-cdk/aws-ecs";
-import {Effect, PolicyStatement} from '@aws-cdk/aws-iam';
-import {BlockPublicAccess, Bucket} from '@aws-cdk/aws-s3';
-import {Code, Function, Runtime} from '@aws-cdk/aws-lambda';
-import {LambdaIntegration, RestApi} from '@aws-cdk/aws-apigateway';
-import {DockerImageAsset} from '@aws-cdk/aws-ecr-assets';
-import * as path from 'path';
-import {AutoScalingGroup} from '@aws-cdk/aws-autoscaling';
-import {RetentionDays} from '@aws-cdk/aws-logs';
-import {IParameter, StringParameter} from '@aws-cdk/aws-ssm';
-import * as ssm from '@aws-cdk/aws-ssm';
+import * as cdk from 'aws-cdk-lib';
+import {CfnOutput, CfnParameter} from 'aws-cdk-lib';
+import {Construct} from 'constructs';
+import * as ssm from "aws-cdk-lib/aws-ssm";
+import {StringParameter} from "aws-cdk-lib/aws-ssm";
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import {InstanceClass, InstanceSize, InstanceType} from 'aws-cdk-lib/aws-ec2';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import {ContainerImage, Ec2TaskDefinition, EcsOptimizedImage, LogDriver, NetworkMode} from 'aws-cdk-lib/aws-ecs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import {Code} from 'aws-cdk-lib/aws-lambda';
+import {BlockPublicAccess, Bucket} from "aws-cdk-lib/aws-s3";
+import {AutoScalingGroup} from "aws-cdk-lib/aws-autoscaling";
+import {Effect, PolicyStatement} from "aws-cdk-lib/aws-iam";
+import {DockerImageAsset} from "aws-cdk-lib/aws-ecr-assets";
+import * as path from "node:path";
+import {RetentionDays} from "aws-cdk-lib/aws-logs";
+import {LambdaIntegration, RestApi} from "aws-cdk-lib/aws-apigateway";
+
+// import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class McStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     const opUsername = new CfnParameter(this, "opUsername");
@@ -39,7 +43,7 @@ export class McStack extends cdk.Stack {
       subnetConfiguration: [
         {
           name: "mc-subnet",
-          subnetType: SubnetType.PUBLIC
+          subnetType: ec2.SubnetType.PUBLIC
         }
       ]
     });
@@ -65,7 +69,10 @@ export class McStack extends cdk.Stack {
       vpc: vpc,
     });
 
-    cluster.addAutoScalingGroup(autoScalingGroup);
+    const capacityProvider = new ecs.AsgCapacityProvider(this, 'AsgCapacityProvider', {
+      autoScalingGroup,
+    });
+    cluster.addAsgCapacityProvider(capacityProvider)
 
     const taskDefinition = new Ec2TaskDefinition(this, "taskDefinition", {networkMode: NetworkMode.HOST});
 
@@ -137,9 +144,9 @@ export class McStack extends cdk.Stack {
       conditions: {ArnEquals: {"ecs:cluster": cluster.clusterArn}}
     }))
 
-    const startServerLambda = new Function(this, "mc-start-server", {
+    const startServerLambda = new lambda.Function(this, "mc-start-server", {
       handler: "startServer.handler",
-      runtime: Runtime.NODEJS_12_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       code: Code.fromAsset("src"),
       environment: {
         BUCKET: bucket.bucketName,
