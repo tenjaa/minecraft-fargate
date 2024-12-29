@@ -1,27 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Callback</title>
+    <meta charset="UTF-8" />
+    <title>Read ID Token</title>
 </head>
 <body>
-<div>
-    Hello: <pre id="email"></pre>
-    Access token: <pre id="access-token"></pre>
-    ID token: <pre id="id-token"></pre>
-    Refresh token: <pre id="refresh-token"></pre>
-</div>
+<h1>Read and Display ID Token</h1>
 
-<script type="module">
-    import { userManager } from "./main.js";
+<div id="token-output"></div>
 
-    userManager.signinCallback().then(function (user) {
-        document.getElementById("email").textContent = user.profile?.email;
-        document.getElementById("access-token").textContent = user.access_token;
-        document.getElementById("id-token").textContent = user.id_token;
-        document.getElementById("refresh-token").textContent = user.refresh_token;
-    });
+<script>
+    // 1. Capture the URL hash part (everything after '#')
+    const hash = window.location.hash;
+
+    // 2. Remove the leading '#' and parse the hash as query parameters
+    //    Note: hash.substring(1) will remove the '#' from the string
+    const params = new URLSearchParams(hash.substring(1));
+
+    // 3. Retrieve the 'id_token' parameter
+    const idToken = params.get("id_token");
+
+    // 4. Print it to the console (for debugging)
+    console.log("ID Token:", idToken);
+
+    // 5. Display it in the page (for demonstration)
+    const outputDiv = document.getElementById("token-output");
+    if (idToken) {
+        outputDiv.textContent = `ID Token: ${idToken}`;
+    } else {
+        outputDiv.textContent = "No id_token found in the URL hash.";
+    }
 </script>
-
 </body>
 </html>
