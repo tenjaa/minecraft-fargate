@@ -8,7 +8,7 @@ import {
 } from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpUserPoolAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
-import {OAuthScope, UserPool} from "aws-cdk-lib/aws-cognito";
+import { OAuthScope, UserPool } from "aws-cdk-lib/aws-cognito";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
 import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
@@ -78,7 +78,9 @@ export class MinecraftStack extends cdk.Stack {
       desiredCapacity: 0,
       minCapacity: 0,
       maxCapacity: 1,
-      machineImage: ecs.EcsOptimizedImage.amazonLinux2023(ecs.AmiHardwareType.ARM),
+      machineImage: ecs.EcsOptimizedImage.amazonLinux2023(
+        ecs.AmiHardwareType.ARM,
+      ),
     });
     autoScalingGroup.addSecurityGroup(securityGroup);
 
@@ -234,7 +236,7 @@ export class MinecraftStack extends cdk.Stack {
         email: true,
         phone: false,
         preferredUsername: false,
-      }
+      },
     });
     userPool.addDomain("CognitoDomain", {
       cognitoDomain: {
@@ -244,16 +246,16 @@ export class MinecraftStack extends cdk.Stack {
     const userPoolClient = userPool.addClient("Client", {
       oAuth: {
         callbackUrls: ["https://tenjaa.github.io/minecraft-fargate/callback"],
-        scopes: [OAuthScope.EMAIL,],
+        scopes: [OAuthScope.EMAIL],
         flows: {
           implicitCodeGrant: true,
           authorizationCodeGrant: false,
           clientCredentials: false,
-        }
+        },
       },
       authFlows: {
         user: true,
-      }
+      },
     });
 
     const httpApi = new HttpApi(this, "Api", {
