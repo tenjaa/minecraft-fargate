@@ -78,7 +78,7 @@ export class MinecraftStack extends cdk.Stack {
       desiredCapacity: 0,
       minCapacity: 0,
       maxCapacity: 1,
-      machineImage: ecs.EcsOptimizedImage.amazonLinux2(ecs.AmiHardwareType.ARM),
+      machineImage: ecs.EcsOptimizedImage.amazonLinux2023(ecs.AmiHardwareType.ARM),
     });
     autoScalingGroup.addSecurityGroup(securityGroup);
 
