@@ -146,7 +146,7 @@ export class MinecraftStack extends cdk.Stack {
         logRetention: RetentionDays.ONE_WEEK,
       }),
       stopTimeout: cdk.Duration.seconds(120),
-      memoryReservationMiB: 1900,
+      memoryReservationMiB: 1500,
     });
     containerDefinition.addPortMappings({
       containerPort: 25565,
