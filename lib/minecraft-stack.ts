@@ -74,7 +74,7 @@ export class MinecraftStack extends cdk.Stack {
       vpc: vpc,
     });
     const autoScalingGroup = cluster.addCapacity("DefaultAutoScalingGroup", {
-      instanceType: InstanceType.of(InstanceClass.T4G, InstanceSize.SMALL),
+      instanceType: InstanceType.of(InstanceClass.T4G, InstanceSize.MEDIUM),
       desiredCapacity: 0,
       minCapacity: 0,
       maxCapacity: 1,
