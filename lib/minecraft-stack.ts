@@ -27,6 +27,9 @@ import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import type * as ssm from "aws-cdk-lib/aws-ssm";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
+import { Build } from "../bin/build.js";
+
+import NODE_LAMBDA_RUNTIME = Build.NODE_LAMBDA_RUNTIME;
 
 export class MinecraftStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -173,7 +176,7 @@ export class MinecraftStack extends cdk.Stack {
     const startServerLambda = new NodejsFunction(this, "mc-start-server", {
       functionName: "start-server",
       entry: path.join(__dirname, "..", "src", "start-server.handler.ts"),
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: NODE_LAMBDA_RUNTIME,
       environment: {
         BUCKET: bucket.bucketName,
         DUCK_DNS_DOMAIN: duckDnsSubDomain.valueAsString,
