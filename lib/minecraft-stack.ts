@@ -31,6 +31,10 @@ import { Build } from "../bin/build.js";
 
 import NODE_LAMBDA_RUNTIME = Build.NODE_LAMBDA_RUNTIME;
 
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 export class MinecraftStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
