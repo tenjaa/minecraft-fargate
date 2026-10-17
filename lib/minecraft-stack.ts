@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import * as cdk from "aws-cdk-lib";
 import { CfnParameter, Duration } from "aws-cdk-lib";
 import {
@@ -8,7 +9,7 @@ import {
 } from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpUserPoolAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
-import { OAuthScope, UserPool } from "aws-cdk-lib/aws-cognito";
+import { FeaturePlan, OAuthScope, UserPool } from "aws-cdk-lib/aws-cognito";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
 import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
@@ -27,11 +28,9 @@ import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import type * as ssm from "aws-cdk-lib/aws-ssm";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
-import { Build } from "../bin/build.js";
+import { Build } from "../bin/build.ts";
 
 import NODE_LAMBDA_RUNTIME = Build.NODE_LAMBDA_RUNTIME;
-
-import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -231,23 +230,25 @@ export class MinecraftStack extends cdk.Stack {
     );
     bucket.grantRead(startServerLambda, "mods/*");
 
-    const userPool = new UserPool(this, "UserPool4", {
-      standardAttributes: {
-        email: {
-          required: true,
-          mutable: false,
-        },
-      },
+    const userPool = new UserPool(this, "UserPool", {
+      signInCaseSensitive: false,
+      featurePlan: FeaturePlan.ESSENTIALS,
       signInAliases: {
         username: false,
         email: true,
         phone: false,
         preferredUsername: false,
       },
+      signInPolicy: {
+        allowedFirstAuthFactors: {
+          password: true,
+          emailOtp: true,
+        },
+      },
     });
     userPool.addDomain("CognitoDomain", {
       cognitoDomain: {
-        domainPrefix: "tenjaa-mc4",
+        domainPrefix: "tenjaa-mc",
       },
     });
     const userPoolClient = userPool.addClient("Client", {

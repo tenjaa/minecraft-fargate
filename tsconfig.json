@@ -1,15 +1,11 @@
 {
   "compilerOptions": {
-    "lib": ["es2023"],
+    "noEmit": true,
+    "target": "esnext",
     "module": "nodenext",
-    "target": "es2022",
-
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "nodenext",
-    "resolveJsonModule": true
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true
   },
-  "exclude": ["node_modules", "cdk.out"]
+  "include": ["./src/**/*"],
+  "exclude": ["node_modules", "dist", "cdk.out"]
 }
