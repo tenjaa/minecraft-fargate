@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8" />
     <title>Read ID Token and Fetch HTML</title>
@@ -36,7 +36,7 @@
         fetch("https://t2qsp41x91.execute-api.eu-central-1.amazonaws.com/", {
             method: "POST",
             headers: {
-                "Authorization": "Bearer " + idToken
+                "Authorization": `Bearer ${idToken}`
             }
         })
             .then((response) => {
@@ -49,7 +49,7 @@
             })
             .catch((error) => {
                 console.error("Error fetching API:", error);
-                document.getElementById("api-result").textContent = "Error: " + error;
+                document.getElementById("api-result").textContent = `Error: ${error}`;
             });
     }
 </script>

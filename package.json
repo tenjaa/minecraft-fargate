@@ -12,24 +12,22 @@
     "cdk": "cdk"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.8",
-    "@types/aws-lambda": "^8.10.159",
-    "@types/node": "24.10.1",
-    "aws-cdk": "2.1033.0",
-    "esbuild": "^0.27.0",
-    "ts-node": "10.9.2",
-    "tsx": "^4.21.0",
-    "typescript": "5.9.3"
+    "@biomejs/biome": "2.5.15",
+    "@types/aws-lambda": "^8.10.164",
+    "@types/node": "26.6.5",
+    "aws-cdk": "2.1145.0",
+    "aws-cdk-lib": "^2.273.0",
+    "constructs": "^10.8.1",
+    "esbuild": "^0.28.2",
+    "typescript": "7.0.2"
   },
   "dependencies": {
-    "@aws-cdk/app-staging-synthesizer-alpha": "^2.230.0-alpha.0",
-    "@aws-sdk/client-auto-scaling": "^3.940.0",
-    "@aws-sdk/client-ec2": "^3.940.0",
-    "@aws-sdk/client-ecs": "^3.940.0",
-    "@aws-sdk/client-s3": "^3.940.0",
-    "@aws-sdk/s3-request-presigner": "^3.940.0",
-    "aws-cdk-lib": "2.230.0",
-    "constructs": "10.4.3",
-    "oidc-client-ts": "^3.4.1"
+    "@aws-cdk/app-staging-synthesizer-alpha": "^2.273.0-alpha.0",
+    "@aws-sdk/client-auto-scaling": "^3.1152.0",
+    "@aws-sdk/client-ec2": "^3.1152.0",
+    "@aws-sdk/client-ecs": "^3.1152.0",
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
+    "oidc-client-ts": "^3.5.0"
   }
 }
