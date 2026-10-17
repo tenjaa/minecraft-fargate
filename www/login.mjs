@@ -1,8 +1,8 @@
+import { createAuth, saveLogin } from "./auth.mjs";
 import {
   cognito,
   SITE_CONFIG as config,
   FIRST_STEP_MESSAGE,
-  handoff,
   SafeError,
 } from "./site.mjs";
 
@@ -17,6 +17,9 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
   let busy = false;
   let active = true;
   let generation = 0;
+  let auth;
+  const storageMessage =
+    "Der sichere Seitenwechsel ist nicht moeglich. Bitte erlaube Sitzungsspeicher in diesem Browser.";
 
   function setBusy(value) {
     busy = value;
@@ -36,13 +39,36 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
     codeForm.hidden = true;
   }
 
+  function redirectSavedSession() {
+    let hasSession;
+    try {
+      if (auth) auth.restore();
+      else auth = createAuth(win.sessionStorage, fetcher);
+      hasSession = auth.hasSession();
+    } catch {
+      status.textContent = storageMessage;
+      return;
+    }
+    if (!hasSession) return;
+    generation += 1;
+    active = false;
+    session = undefined;
+    username = undefined;
+    setBusy(false);
+    status.textContent = "Angemeldet. Deine Welt wird geoeffnet ...";
+    win.location.replace("callback.html");
+  }
+
   function finish(result) {
     if (!active) return;
-    handoff(
-      result.AuthenticationResult?.IdToken,
-      win.sessionStorage,
-      win.location,
-    );
+    let storage;
+    try {
+      storage = win.sessionStorage;
+    } catch {
+      throw new SafeError("storage");
+    }
+    saveLogin(result.AuthenticationResult, storage);
+    win.location.replace("callback.html");
     session = undefined;
     username = undefined;
     codeForm.reset();
@@ -110,7 +136,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
         status.textContent =
           error.kind === "network"
             ? "Verbindung fehlgeschlagen. Bitte pruefe dein Netzwerk und versuche es erneut."
-            : "Der sichere Seitenwechsel ist nicht moeglich. Bitte erlaube Sitzungsspeicher in diesem Browser.";
+            : storageMessage;
         return;
       }
     } finally {
@@ -158,8 +184,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
         status.textContent =
           "Verbindung fehlgeschlagen. Bitte pruefe dein Netzwerk und versuche den Code erneut.";
       } else if (error.kind === "storage") {
-        status.textContent =
-          "Der sichere Seitenwechsel ist nicht moeglich. Bitte erlaube Sitzungsspeicher in diesem Browser.";
+        status.textContent = storageMessage;
       } else {
         status.textContent =
           "Der Code konnte nicht bestaetigt werden. Pruefe ihn oder fordere einen neuen Code an.";
@@ -180,18 +205,22 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
   win.addEventListener("pagehide", () => {
     active = false;
     generation += 1;
+    auth?.suspend();
     reset();
     setBusy(false);
   });
   win.addEventListener("pageshow", (event) => {
     if (event.persisted) {
+      generation += 1;
       active = true;
       setBusy(false);
       status.textContent = "Bitte melde dich erneut an.";
+      redirectSavedSession();
     }
   });
   setBusy(false);
   status.textContent = "Fordere deinen Login-Code an.";
+  redirectSavedSession();
 }
 
 if (typeof document !== "undefined") startLogin();

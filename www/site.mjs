@@ -1,4 +1,3 @@
-export const TRANSFER_KEY = "minecraft.login";
 export const FIRST_STEP_MESSAGE =
   "Falls deine Adresse freigeschaltet ist, erhaeltst du einen Code. Pruefe dein E-Mail-Postfach.";
 
@@ -33,40 +32,6 @@ export function validToken(token) {
   );
 }
 
-export function handoff(token, storage, location, now = Date.now()) {
-  if (!validToken(token)) throw new SafeError("auth");
-  try {
-    storage.setItem(TRANSFER_KEY, JSON.stringify({ token, createdAt: now }));
-    location.replace("callback.html");
-  } catch {
-    try {
-      storage.removeItem(TRANSFER_KEY);
-    } catch {
-      /* Storage can be unavailable. */
-    }
-    throw new SafeError("storage");
-  }
-}
-
-export function consumeTransfer(storage, now = Date.now()) {
-  try {
-    const raw = storage.getItem(TRANSFER_KEY);
-    storage.removeItem(TRANSFER_KEY);
-    const value = JSON.parse(raw);
-    if (
-      !value ||
-      !validToken(value.token) ||
-      !Number.isFinite(value.createdAt) ||
-      value.createdAt > now ||
-      now - value.createdAt > 60000
-    )
-      return undefined;
-    return value.token;
-  } catch {
-    return undefined;
-  }
-}
-
 export function scrubFragment(win) {
   if (win.location.hash) {
     win.history.replaceState(
@@ -97,7 +62,7 @@ export async function cognito(config, action, payload, fetcher = fetch) {
   try {
     result = await response.json();
   } catch {
-    throw new SafeError("auth");
+    throw new SafeError(response.status >= 500 ? "network" : "auth");
   }
   if (!response.ok) {
     const type =
@@ -138,6 +103,8 @@ export function validateServer(value) {
     !value.serviceState ||
     !count(value.serviceState.pending) ||
     !count(value.serviceState.running) ||
+    !count(value.serviceState.desired) ||
+    typeof value.ready !== "boolean" ||
     !value.mods ||
     !Array.isArray(value.mods.client) ||
     !Array.isArray(value.mods.server) ||
@@ -157,11 +124,16 @@ export function validateServer(value) {
   return value;
 }
 
-export async function fetchServer(config, token, fetcher = fetch) {
+export async function fetchServer(
+  config,
+  token,
+  fetcher = fetch,
+  method = "GET",
+) {
   let response;
   try {
     response = await fetcher(config.apiUrl, {
-      method: "POST",
+      method,
       headers: { Authorization: `Bearer ${token}` },
       credentials: "omit",
       cache: "no-store",

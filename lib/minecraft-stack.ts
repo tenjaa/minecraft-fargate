@@ -254,6 +254,10 @@ export class MinecraftStack extends cdk.Stack {
     const userPoolClient = userPool.addClient("Client", {
       disableOAuth: true,
       preventUserExistenceErrors: true,
+      idTokenValidity: Duration.hours(1),
+      accessTokenValidity: Duration.hours(1),
+      refreshTokenValidity: Duration.days(7),
+      enableTokenRevocation: true,
       authFlows: {
         user: true,
       },
@@ -263,7 +267,7 @@ export class MinecraftStack extends cdk.Stack {
       corsPreflight: {
         allowHeaders: ["Authorization"],
         allowOrigins: ["https://tenjaa.github.io"],
-        allowMethods: [CorsHttpMethod.POST],
+        allowMethods: [CorsHttpMethod.GET, CorsHttpMethod.POST],
         maxAge: Duration.hours(1),
       },
       defaultAuthorizer: new HttpUserPoolAuthorizer("Authorizer", userPool, {
@@ -272,7 +276,7 @@ export class MinecraftStack extends cdk.Stack {
     });
 
     httpApi.addRoutes({
-      methods: [HttpMethod.POST],
+      methods: [HttpMethod.GET, HttpMethod.POST],
       path: "/",
       integration: new HttpLambdaIntegration(
         "LambdaIntegration",

@@ -16,8 +16,12 @@ import {
   type S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { APIGatewayProxyHandlerV2WithJWTAuthorizer } from "aws-lambda";
+import type {
+  APIGatewayProxyHandlerV2WithJWTAuthorizer,
+  APIGatewayProxyStructuredResultV2,
+} from "aws-lambda";
 import type { EmbeddedMetricFormat } from "./embedded-metric-format.ts";
+import { isMinecraftReady } from "./minecraft-status.ts";
 
 interface Props {
   bucket: string;
@@ -40,36 +44,52 @@ export class StartServer {
     this.emf = new Console({ stdout: process.stdout }).log;
   }
 
-  public handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) => {
-    const email = event.requestContext.authorizer.jwt.claims.email;
+  public handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (
+    event,
+  ): Promise<APIGatewayProxyStructuredResultV2> => {
+    const method = event.requestContext.http.method;
+    if (method !== "GET" && method !== "POST") {
+      return {
+        statusCode: 405,
+        headers: { Allow: "GET, POST", "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Method not allowed" }),
+      };
+    }
+    if (method === "POST") {
+      await this.scaleAsg();
+      await this.startEcsTask();
+      const email = event.requestContext.authorizer.jwt.claims.email;
 
-    const cwMetricsLogs: EmbeddedMetricFormat = {
-      _aws: {
-        Timestamp: event.requestContext.timeEpoch,
-        CloudWatchMetrics: [
-          {
-            Namespace: "Minecraft",
-            Dimensions: [["User"]],
-            Metrics: [
-              {
-                Name: "started",
-                Unit: "Count",
-              },
-            ],
-          },
-        ],
-      },
-      started: 1,
-      User: email,
-    };
-    this.emf(JSON.stringify(cwMetricsLogs));
-
-    await this.scaleAsg();
-    await this.startEcsTask();
+      const cwMetricsLogs: EmbeddedMetricFormat = {
+        _aws: {
+          Timestamp: event.requestContext.timeEpoch,
+          CloudWatchMetrics: [
+            {
+              Namespace: "Minecraft",
+              Dimensions: [["User"]],
+              Metrics: [
+                {
+                  Name: "started",
+                  Unit: "Count",
+                },
+              ],
+            },
+          ],
+        },
+        started: 1,
+        User: email,
+      };
+      this.emf(JSON.stringify(cwMetricsLogs));
+    }
     const modList = await this.listMods();
     const ec2State = await this.getEc2State();
     const serviceState = await this.getServiceState();
     const mods = await this.formatMods(modList);
+    const ready =
+      serviceState.running > 0 &&
+      serviceState.pending === 0 &&
+      !!ec2State.ip &&
+      (await isMinecraftReady(ec2State.ip));
 
     return {
       statusCode: 200,
@@ -84,6 +104,7 @@ export class StartServer {
         ec2State: ec2State.state,
         serviceState,
         mods,
+        ready,
       }),
     };
   };
@@ -159,14 +180,21 @@ export class StartServer {
       response.failures?.length ||
       typeof service.pendingCount !== "number" ||
       typeof service.runningCount !== "number" ||
+      typeof service.desiredCount !== "number" ||
       !Number.isInteger(service.pendingCount) ||
       !Number.isInteger(service.runningCount) ||
+      !Number.isInteger(service.desiredCount) ||
       service.pendingCount < 0 ||
-      service.runningCount < 0
+      service.runningCount < 0 ||
+      service.desiredCount < 0
     ) {
       throw new Error("Unable to load Minecraft service state");
     }
-    return { pending: service.pendingCount, running: service.runningCount };
+    return {
+      desired: service.desiredCount,
+      pending: service.pendingCount,
+      running: service.runningCount,
+    };
   }
 
   private async formatMods(modList: string[]) {

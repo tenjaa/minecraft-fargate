@@ -23,17 +23,25 @@
         </div>
         <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Zugang wird geprueft ...</p>
         <div class="actions">
-          <button id="refresh" type="button" disabled>Status aktualisieren</button>
+          <button id="start" type="button" disabled>Server starten</button>
+          <button id="refresh" class="secondary" type="button" disabled>Status aktualisieren</button>
           <a id="login-link" class="button secondary" href="./index.html" hidden>Erneut anmelden</a>
+          <button id="logout" class="secondary" type="button" disabled>Abmelden</button>
+        </div>
+        <p id="startup-warning" class="status warning" role="status" hidden>Der Server ist seit mehr als 5 Minuten nicht bereit. Bitte wende dich an den Admin. Wir pruefen den Status weiterhin automatisch.</p>
+        <div id="refresh-wait" class="refresh-wait" hidden>
+          <p id="refresh-countdown" class="hint" aria-live="off"></p>
+          <progress id="refresh-progress" max="30" value="0" aria-label="Wartezeit bis zur naechsten Statusabfrage"></progress>
         </div>
         <div id="server-details" hidden>
           <dl class="connection">
-            <div><dt>Server-Adresse</dt><dd id="address"></dd></div>
+            <div><dt>Server-Adresse</dt><dd class="server-address"><span id="address"></span><button id="copy-address" class="secondary copy-button" type="button" aria-label="Server-Adresse kopieren" disabled>Kopieren</button></dd></div>
             <div><dt>Aktuelle IP</dt><dd id="ip"></dd></div>
             <div><dt>Rechner</dt><dd id="ec2-state"></dd></div>
             <div><dt>Spielserver</dt><dd id="service-state"></dd></div>
           </dl>
-          <div class="notice"><strong>Die Welt faehrt hoch</strong><p>Der Start kann bis zu 5 Minuten dauern. Aktualisiere den Status etwa alle 30 Sekunden manuell. Sobald der Server bereit ist, verbinde dich in Minecraft ueber die Server-Adresse.</p></div>
+          <p id="copy-status" class="hint" role="status" hidden></p>
+          <div class="notice"><strong id="notice-title">Deine Welt</strong><p id="notice-text"></p></div>
           <div class="mod-grid">
             <section aria-labelledby="client-title"><h3 id="client-title">Mods fuer deinen Client</h3><p class="hint">Lade diese Dateien herunter und lege sie in deinen Minecraft-Mods-Ordner.</p><ul id="client-mods" class="mod-list"></ul></section>
             <section aria-labelledby="server-mod-title"><h3 id="server-mod-title">Mods auf dem Server</h3><p class="hint">Diese Mods laufen bereits auf unserer Welt.</p><ul id="server-mods" class="mod-list"></ul></section>
@@ -41,7 +49,7 @@
         </div>
         <noscript><p class="status">Bitte aktiviere JavaScript, um den Serverstatus abzurufen.</p></noscript>
       </section>
-      <footer>Nach dem Neuladen bitte erneut anmelden · Keine automatische Aktualisierung</footer>
+      <footer>Anmeldung bis zu 7 Tage in diesem Tab · Automatischer Statuscheck nur waehrend des Starts</footer>
     </main>
   </body>
 </html>
