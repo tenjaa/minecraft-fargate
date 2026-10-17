@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
     "noEmit": true,
+    "types": ["node"],
     "target": "esnext",
     "module": "nodenext",
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["./src/**/*"],
+  "include": ["./src/**/*", "./lib/**/*", "./bin/**/*"],
   "exclude": ["node_modules", "dist", "cdk.out"]
 }

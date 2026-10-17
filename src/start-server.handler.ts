@@ -2,8 +2,8 @@ import { AutoScalingClient } from "@aws-sdk/client-auto-scaling";
 import { EC2Client } from "@aws-sdk/client-ec2";
 import { ECSClient } from "@aws-sdk/client-ecs";
 import { S3Client } from "@aws-sdk/client-s3";
-import { loadStrict } from "./env";
-import { StartServer } from "./start-server";
+import { loadStrict } from "./env.ts";
+import { StartServer } from "./start-server.ts";
 
 const autoScalingClient = new AutoScalingClient();
 const ecsClient = new ECSClient();

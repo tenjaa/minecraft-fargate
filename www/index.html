@@ -1,147 +1,32 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Minecraft Login</title>
-</head>
-<body>
-<main>
-    <h1>Minecraft Login</h1>
-    <form id="email-form">
+    <meta name="referrer" content="no-referrer" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://*.amazonaws.com; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <title>Anmelden · Minecraft</title>
+    <link rel="stylesheet" href="./login.css" />
+    <script type="module" src="./login.mjs"></script>
+  </head>
+  <body>
+    <main aria-labelledby="login-title">
+      <h1 id="login-title">Minecraft Login</h1>
+      <p>Melde dich mit deiner freigeschalteten E-Mail-Adresse an.</p>
+      <form id="email-form">
         <label for="email">E-Mail-Adresse</label>
-        <input id="email" name="email" type="email" autocomplete="username" required />
-        <button type="submit">Login-Code senden</button>
-    </form>
-    <form id="code-form" hidden>
-        <label for="code">Code aus der E-Mail</label>
-        <input id="code" name="code" type="text" inputmode="numeric"
-               autocomplete="one-time-code" pattern="[0-9]+" required />
-        <button type="submit">Einloggen</button>
-        <button id="restart" type="button">Neu beginnen</button>
-    </form>
-    <p id="status" role="status" aria-live="polite"></p>
-</main>
-<script>
-    const clientId = "1s107p5c5dippndqvu6fujli0o";
-    const endpoint = "https://cognito-idp.eu-central-1.amazonaws.com/";
-    const emailForm = document.getElementById("email-form");
-    const codeForm = document.getElementById("code-form");
-    const emailInput = document.getElementById("email");
-    const codeInput = document.getElementById("code");
-    const status = document.getElementById("status");
-    let session;
-    let username;
-
-    async function cognito(action, payload) {
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-amz-json-1.1",
-                "X-Amz-Target": `AWSCognitoIdentityProviderService.${action}`,
-            },
-            body: JSON.stringify(payload),
-            credentials: "omit",
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            throw new Error(result.message || result.Message || `Cognito-Fehler (${response.status})`);
-        }
-        return result;
-    }
-
-    function setBusy(busy) {
-        for (const element of [...emailForm.elements, ...codeForm.elements]) {
-            element.disabled = busy;
-        }
-    }
-
-    function finishLogin(result) {
-        const token = result.AuthenticationResult?.IdToken;
-        if (!token) {
-            throw new Error(`Unerwartete Cognito-Antwort: ${result.ChallengeName || "ID-Token fehlt"}`);
-        }
-        // The existing callback consumes the ID token from the URL fragment.
-        window.location.replace(`callback.html#${new URLSearchParams({ id_token: token })}`);
-    }
-
-    emailForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        setBusy(true);
-        status.textContent = "Login-Code wird angefordert ...";
-        session = undefined;
-        username = emailInput.value.trim();
-        try {
-            let result = await cognito("InitiateAuth", {
-                ClientId: clientId,
-                AuthFlow: "USER_AUTH",
-                AuthParameters: {
-                    USERNAME: username,
-                    PREFERRED_CHALLENGE: "EMAIL_OTP",
-                },
-            });
-            if (result.ChallengeName === "SELECT_CHALLENGE") {
-                if (!result.AvailableChallenges?.includes("EMAIL_OTP") || !result.Session) {
-                    throw new Error("E-Mail-Login ist fuer dieses Konto nicht verfuegbar.");
-                }
-                result = await cognito("RespondToAuthChallenge", {
-                    ClientId: clientId,
-                    ChallengeName: "SELECT_CHALLENGE",
-                    Session: result.Session,
-                    ChallengeResponses: { USERNAME: username, ANSWER: "EMAIL_OTP" },
-                });
-            }
-            if (result.AuthenticationResult) {
-                finishLogin(result);
-                return;
-            }
-            if (result.ChallengeName !== "EMAIL_OTP" || !result.Session) {
-                throw new Error(`E-Mail-Code nicht verfuegbar: ${result.ChallengeName || "Session fehlt"}`);
-            }
-            session = result.Session;
-            emailForm.hidden = true;
-            codeForm.hidden = false;
-            status.textContent = "Code wurde angefordert. Pruefe dein E-Mail-Postfach.";
-        } catch (error) {
-            status.textContent = `Login fehlgeschlagen: ${error.message}`;
-        } finally {
-            setBusy(false);
-            if (!codeForm.hidden) codeInput.focus();
-        }
-    });
-
-    codeForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        setBusy(true);
-        status.textContent = "Code wird geprueft ...";
-        try {
-            const result = await cognito("RespondToAuthChallenge", {
-                ClientId: clientId,
-                ChallengeName: "EMAIL_OTP",
-                Session: session,
-                ChallengeResponses: {
-                    USERNAME: username,
-                    EMAIL_OTP_CODE: codeInput.value.trim(),
-                },
-            });
-            if (result.Session) session = result.Session;
-            finishLogin(result);
-        } catch (error) {
-            status.textContent = `Login fehlgeschlagen: ${error.message}`;
-        } finally {
-            setBusy(false);
-        }
-    });
-
-    document.getElementById("restart").addEventListener("click", () => {
-        session = undefined;
-        username = undefined;
-        codeForm.reset();
-        codeForm.hidden = true;
-        emailForm.hidden = false;
-        status.textContent = "";
-        emailInput.focus();
-    });
-</script>
-</body>
+        <input id="email" name="email" type="email" autocomplete="username" maxlength="254" placeholder="du@beispiel.de" required disabled />
+        <button type="submit" disabled>Code senden</button>
+      </form>
+      <form id="code-form" hidden>
+        <label for="code">Code aus deiner E-Mail</label>
+        <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]+" maxlength="16" required disabled aria-describedby="code-help" />
+        <p id="code-help" class="hint">Pruefe auch deinen Spam-Ordner.</p>
+        <button type="submit" disabled>Anmelden</button>
+        <button id="restart" class="secondary" type="button" disabled>Andere E-Mail / neuen Code anfordern</button>
+      </form>
+      <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Anmeldung wird vorbereitet ...</p>
+      <noscript><p class="status">Bitte aktiviere JavaScript, um dich sicher anzumelden.</p></noscript>
+    </main>
+  </body>
 </html>

@@ -9,7 +9,7 @@ import {
 } from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpUserPoolAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
-import { FeaturePlan, OAuthScope, UserPool } from "aws-cdk-lib/aws-cognito";
+import { FeaturePlan, UserPool } from "aws-cdk-lib/aws-cognito";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
 import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
@@ -252,15 +252,8 @@ export class MinecraftStack extends cdk.Stack {
       },
     });
     const userPoolClient = userPool.addClient("Client", {
-      oAuth: {
-        callbackUrls: ["https://tenjaa.github.io/minecraft-fargate/callback"],
-        scopes: [OAuthScope.EMAIL],
-        flows: {
-          implicitCodeGrant: true,
-          authorizationCodeGrant: false,
-          clientCredentials: false,
-        },
-      },
+      disableOAuth: true,
+      preventUserExistenceErrors: true,
       authFlows: {
         user: true,
       },
@@ -269,9 +262,9 @@ export class MinecraftStack extends cdk.Stack {
     const httpApi = new HttpApi(this, "Api", {
       corsPreflight: {
         allowHeaders: ["Authorization"],
-        allowOrigins: ["*"],
-        allowMethods: [CorsHttpMethod.ANY],
-        maxAge: Duration.days(10),
+        allowOrigins: ["https://tenjaa.github.io"],
+        allowMethods: [CorsHttpMethod.POST],
+        maxAge: Duration.hours(1),
       },
       defaultAuthorizer: new HttpUserPoolAuthorizer("Authorizer", userPool, {
         userPoolClients: [userPoolClient],
@@ -285,6 +278,13 @@ export class MinecraftStack extends cdk.Stack {
         "LambdaIntegration",
         startServerLambda,
       ),
+    });
+
+    new cdk.CfnOutput(this, "CognitoClientId", {
+      value: userPoolClient.userPoolClientId,
+    });
+    new cdk.CfnOutput(this, "ApiUrl", {
+      value: httpApi.apiEndpoint,
     });
   }
 }

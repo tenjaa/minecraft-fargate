@@ -17,7 +17,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { APIGatewayProxyHandlerV2WithJWTAuthorizer } from "aws-lambda";
-import type { EmbeddedMetricFormat } from "./embedded-metric-format";
+import type { EmbeddedMetricFormat } from "./embedded-metric-format.ts";
 
 interface Props {
   bucket: string;
@@ -41,7 +41,6 @@ export class StartServer {
   }
 
   public handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) => {
-    console.log(JSON.stringify(event));
     const email = event.requestContext.authorizer.jwt.claims.email;
 
     const cwMetricsLogs: EmbeddedMetricFormat = {
@@ -70,27 +69,22 @@ export class StartServer {
     const modList = await this.listMods();
     const ec2State = await this.getEc2State();
     const serviceState = await this.getServiceState();
-    const formattedModList = await this.formatMods(modList);
-
-    const body = `
-      Server address: ${this.props.duckDnsDomain}.duckdns.org<br />
-      Server IP: ${ec2State.ip}<br />
-      <br />
-      ${formattedModList}
-      <br />
-      EC2 state: ${ec2State.state} (InService is good)<br />
-      MC state: ${serviceState} (Pending: 0, Running: 1 is good and means the server is starting right now, wich can take up to five minutes)<br />
-      <br />
-      Refresh this page every 30 seconds until everything works.
-      `;
+    const mods = await this.formatMods(modList);
 
     return {
       statusCode: 200,
       headers: {
-        "Content-Type": "text/html",
-        "access-control-allow-origin": "*",
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
       },
-      body: body,
+      body: JSON.stringify({
+        address: `${this.props.duckDnsDomain}.duckdns.org`,
+        ip: ec2State.ip ?? null,
+        ec2State: ec2State.state,
+        serviceState,
+        mods,
+      }),
     };
   };
 
@@ -120,7 +114,8 @@ export class StartServer {
         Prefix: "mods/",
       }),
     );
-    return response.Contents?.map((x) => x.Key)
+    return (response.Contents ?? [])
+      .map((x) => x.Key)
       .filter((x) => x !== undefined)
       .map((s: string) => s.replace("mods/", ""))
       .filter((s: string) => s !== "");
@@ -148,7 +143,7 @@ export class StartServer {
         ip: publicIpAddress,
       };
     }
-    return { stage: "Waiting for EC2 instance...", ip: undefined };
+    return { state: "Waiting for EC2 instance...", ip: undefined };
   }
 
   async getServiceState() {
@@ -158,15 +153,23 @@ export class StartServer {
         services: [this.props.serviceArn],
       }),
     );
-    const pendingCount = response.services?.[0].pendingCount;
-    const runningCount = response.services?.[0].runningCount;
-    return `Pending: ${pendingCount}, Running: ${runningCount}`;
+    const service = response.services?.[0];
+    if (
+      !service ||
+      response.failures?.length ||
+      typeof service.pendingCount !== "number" ||
+      typeof service.runningCount !== "number" ||
+      !Number.isInteger(service.pendingCount) ||
+      !Number.isInteger(service.runningCount) ||
+      service.pendingCount < 0 ||
+      service.runningCount < 0
+    ) {
+      throw new Error("Unable to load Minecraft service state");
+    }
+    return { pending: service.pendingCount, running: service.runningCount };
   }
 
-  private async formatMods(modList: string[] | undefined) {
-    if (!modList) {
-      return "Error loading mods! Please contact admin";
-    }
+  private async formatMods(modList: string[]) {
     const serverMods = modList
       .filter((x) => x.startsWith("server/"))
       .map((x) => x.replace("server/", ""))
@@ -176,25 +179,20 @@ export class StartServer {
       .map((x) => x.replace("client/", ""))
       .filter((x) => x !== "");
 
-    let formattedList = "Mods:<br />";
-    formattedList = `${formattedList}Client mods (These must be downloaded by you!):<br />`;
+    const client: { name: string; url: string }[] = [];
     for (const mod of clientMods) {
       const signedUrl = await getSignedUrl(
         this.s3,
         new GetObjectCommand({
           Bucket: this.props.bucket,
-          Key: `mods/${mod}`,
+          Key: `mods/client/${mod}`,
         }),
         {
           expiresIn: 60 * 5,
         },
       );
-      formattedList = `${formattedList}- ${mod}: <a href="${signedUrl}" download>Download</a><br />`;
+      client.push({ name: mod, url: signedUrl });
     }
-    formattedList = `${formattedList}<br />Server mods (just fyi):<br />`;
-    for (const mod of serverMods) {
-      formattedList = `${formattedList}- ${mod}<br />`;
-    }
-    return formattedList;
+    return { client, server: serverMods };
   }
 }
