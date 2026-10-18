@@ -244,6 +244,13 @@ a {
   display: inline-block;
   padding: 8px 0;
 }
+.join-help {
+  margin-top: 24px;
+  color: var(--muted);
+}
+.join-help summary {
+  cursor: pointer;
+}
 footer {
   color: var(--muted);
   font-size: 0.78rem;
