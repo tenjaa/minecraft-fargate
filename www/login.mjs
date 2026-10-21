@@ -10,6 +10,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
   const emailForm = doc.getElementById("email-form");
   const codeForm = doc.getElementById("code-form");
   const email = doc.getElementById("email");
+  const submittedEmail = doc.getElementById("submitted-email");
   const code = doc.getElementById("code");
   const status = doc.getElementById("status");
   let session;
@@ -30,11 +31,12 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
     codeForm.setAttribute("aria-busy", String(value));
   }
 
-  function reset() {
+  function reset(preserveEmail = false) {
     session = undefined;
     username = undefined;
-    emailForm.reset();
+    if (!preserveEmail) emailForm.reset();
     codeForm.reset();
+    submittedEmail.textContent = "";
     emailForm.hidden = false;
     codeForm.hidden = true;
   }
@@ -143,6 +145,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
       if (requestGeneration === generation) setBusy(false);
     }
     if (!active || requestGeneration !== generation) return;
+    submittedEmail.textContent = username;
     emailForm.hidden = true;
     codeForm.hidden = false;
     status.textContent = FIRST_STEP_MESSAGE;
@@ -198,7 +201,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
 
   doc.getElementById("restart").addEventListener("click", () => {
     if (busy) return;
-    reset();
+    reset(true);
     status.textContent = "Fordere einen neuen Code an.";
     email.focus();
   });

@@ -84,6 +84,9 @@ button:hover:not(:disabled) {
 }
 .status {
   margin: 20px 0 0;
+}
+.status,
+.login-email {
   overflow-wrap: anywhere;
 }
 @media (max-height: 600px) {

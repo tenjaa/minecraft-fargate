@@ -19,6 +19,7 @@
         <button type="submit" disabled>Code senden</button>
       </form>
       <form id="code-form" hidden>
+        <p class="login-email">E-Mail-Adresse: <strong id="submitted-email"></strong></p>
         <label for="code">Code aus deiner E-Mail</label>
         <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]+" maxlength="16" required disabled aria-describedby="code-help" />
         <p id="code-help" class="hint">Pruefe auch deinen Spam-Ordner.</p>
