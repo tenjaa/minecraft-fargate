@@ -7,6 +7,9 @@ COPY scripts scripts
 RUN dos2unix scripts/*
 
 FROM amazoncorretto:25
+RUN dnf install -y tar && \
+    dnf clean all && \
+    tar --version
 WORKDIR /minecraft
 COPY --from=builder forge-installer.jar forge-installer.jar
 RUN java -jar forge-installer.jar --installServer && \
