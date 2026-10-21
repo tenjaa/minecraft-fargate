@@ -24,6 +24,7 @@ cd ..
 # Wait for server to start
 echo "Server starting! Waiting 10m for someone to join"
 echo "/op ${OP_USERNAME}" > /tmp/mc-stdin &
+echo "/whitelist add ${OP_USERNAME}" > /tmp/mc-stdin &
 sleep 10m & wait $!
 
 players=1
