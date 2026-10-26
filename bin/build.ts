@@ -20,3 +20,6 @@ export namespace Build {
     RuntimeFamily.NODEJS,
   );
 }
+
+export const NODEJS_BUNDLING_BANNER =
+  "import { createRequire } from 'module';const require = createRequire(import.meta.url);import {dirname} from 'path';import { fileURLToPath, pathToFileURL } from 'url';const __dirname = dirname(fileURLToPath(import.meta.url))";

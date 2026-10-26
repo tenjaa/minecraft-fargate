@@ -36,6 +36,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "dynamodb-toolbox": "^2.11.1",
     "oidc-client-ts": "^3.5.0",
-    "rcon-client": "^4.2.5"
+    "rcon-client": "^4.2.5",
+    "zod": "^4.6.7"
   }
 }

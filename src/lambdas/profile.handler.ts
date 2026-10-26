@@ -3,12 +3,20 @@ import type {
   APIGatewayProxyStructuredResultV2,
 } from "aws-lambda";
 import {
-  activeUser,
-  ProfileError,
-  resolveMinecraftProfile,
-  synchronizationStatus,
-} from "../allowlist.ts";
-import { getProfile, removeProfile, saveProfile } from "../profiles.ts";
+  getProfile,
+  removeProfile,
+  saveProfile,
+} from "../database/entities.ts";
+import { resolveMinecraftProfile } from "../minecraft-api.ts";
+
+export class ProfileError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+  ) {
+    super(code);
+  }
+}
 
 function response(
   statusCode: number,
@@ -55,29 +63,29 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (
     const claims = event.requestContext.authorizer.jwt.claims;
     const sub = claims.sub;
     const username = claims["cognito:username"];
-    if (
-      typeof sub !== "string" ||
-      typeof username !== "string" ||
-      !(await activeUser(username, sub))
-    ) {
+    if (typeof sub !== "string" || typeof username !== "string") {
       throw new ProfileError(403, "expired");
     }
     const method = event.requestContext.http.method;
     if (method === "PUT") {
-      const minecraft = await resolveMinecraftProfile(
+      const minecraftProfile = await resolveMinecraftProfile(
         requestedName(event.body, event.isBase64Encoded),
       );
-      await saveProfile(sub, username, minecraft);
+      if (!minecraftProfile) {
+        throw new ProfileError(400, "unknown-player");
+      }
+      console.log(
+        `Saving Minecraft profile for ${username}: ${minecraftProfile.id} (${minecraftProfile.name})`,
+      );
+      await saveProfile(sub, minecraftProfile);
       return response(200, {
-        profile: minecraft,
-        synchronization: { state: "pending", appliedAt: null },
+        profile: minecraftProfile,
       });
     }
     if (method === "DELETE") {
       await removeProfile(sub);
       return response(200, {
         profile: null,
-        synchronization: { state: "pending", appliedAt: null },
       });
     }
     if (method !== "GET") {
@@ -88,16 +96,11 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (
       );
     }
     const profile = await getProfile(sub);
-    let synchronization: { state: string; appliedAt: number | null };
-    try {
-      synchronization = await synchronizationStatus();
-    } catch (error) {
-      console.error("Unable to determine allowlist synchronization", error);
-      synchronization = { state: "failed", appliedAt: null };
-    }
+
     return response(200, {
-      profile: profile ? { uuid: profile.uuid, name: profile.name } : null,
-      synchronization,
+      profile: profile
+        ? { id: profile.minecraftId, name: profile.minecraftName }
+        : null,
     });
   } catch (error) {
     if (error instanceof ProfileError) {

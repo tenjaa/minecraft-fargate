@@ -27,6 +27,12 @@ export class DatabaseStack extends Stack {
         writeCapacity: Capacity.autoscaled({ maxCapacity: 5 }),
       }),
       removalPolicy: RemovalPolicy.RETAIN,
+      globalSecondaryIndexes: [
+        {
+          indexName: "gsi_type",
+          partitionKey: { name: "_et", type: AttributeType.STRING },
+        },
+      ],
     });
   }
 }

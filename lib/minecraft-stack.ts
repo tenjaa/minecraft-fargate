@@ -23,13 +23,13 @@ import {
 } from "aws-cdk-lib/aws-ecs";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { NodejsFunction, OutputFormat } from "aws-cdk-lib/aws-lambda-nodejs";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import type * as ssm from "aws-cdk-lib/aws-ssm";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import type { Construct } from "constructs";
-import { Build } from "../bin/build.ts";
+import { Build, NODEJS_BUNDLING_BANNER } from "../bin/build.ts";
 
 import NODE_LAMBDA_RUNTIME = Build.NODE_LAMBDA_RUNTIME;
 
@@ -227,6 +227,10 @@ export class MinecraftStack extends cdk.Stack {
       logRetention: RetentionDays.ONE_WEEK,
       memorySize: 512,
       timeout: Duration.seconds(10),
+      bundling: {
+        format: OutputFormat.ESM,
+        banner: NODEJS_BUNDLING_BANNER,
+      },
     });
     startServerLambda.addToRolePolicy(
       new PolicyStatement({
@@ -316,6 +320,10 @@ export class MinecraftStack extends cdk.Stack {
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
       allowPublicSubnet: true,
       securityGroups: [rconSecurityGroup],
+      bundling: {
+        format: OutputFormat.ESM,
+        banner: NODEJS_BUNDLING_BANNER,
+      },
     });
     const profileLambda = new NodejsFunction(this, "mc-profile", {
       entry: path.join(__dirname, "..", "src", "lambdas", "profile.handler.ts"),
@@ -325,10 +333,20 @@ export class MinecraftStack extends cdk.Stack {
       memorySize: 256,
       logRetention: RetentionDays.ONE_WEEK,
       environment: profileEnvironment,
-      bundling: { bundleAwsSDK: true },
+      bundling: {
+        format: OutputFormat.ESM,
+        banner: NODEJS_BUNDLING_BANNER,
+        bundleAwsSDK: true,
+      },
     });
     const allowlistLambda = new NodejsFunction(this, "mc-allowlist", {
-      entry: path.join(__dirname, "..", "src", "allowlist.handler.ts"),
+      entry: path.join(
+        __dirname,
+        "..",
+        "src",
+        "lambdas",
+        "allowlist.handler.ts",
+      ),
       runtime: NODE_LAMBDA_RUNTIME,
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.seconds(55),
@@ -342,7 +360,11 @@ export class MinecraftStack extends cdk.Stack {
         RCON_FUNCTION: rconLambda.functionName,
         RCON_PASSWORD_PARAMETER: rconPassword.parameterName,
       },
-      bundling: { bundleAwsSDK: true },
+      bundling: {
+        format: OutputFormat.ESM,
+        banner: NODEJS_BUNDLING_BANNER,
+        bundleAwsSDK: true,
+      },
     });
     for (const fn of [profileLambda, allowlistLambda]) {
       props.table.grantReadData(fn);
@@ -353,24 +375,8 @@ export class MinecraftStack extends cdk.Stack {
         }),
       );
     }
-    profileLambda.addToRolePolicy(
-      new PolicyStatement({
-        actions: ["dynamodb:PutItem", "dynamodb:DeleteItem"],
-        resources: [props.table.tableArn],
-        conditions: {
-          "ForAllValues:StringEquals": { "dynamodb:LeadingKeys": ["PROFILES"] },
-        },
-      }),
-    );
-    allowlistLambda.addToRolePolicy(
-      new PolicyStatement({
-        actions: ["dynamodb:PutItem"],
-        resources: [props.table.tableArn],
-        conditions: {
-          "ForAllValues:StringEquals": { "dynamodb:LeadingKeys": ["SYNC"] },
-        },
-      }),
-    );
+    props.table.grantReadWriteData(profileLambda);
+    props.table.grantReadWriteData(allowlistLambda);
     rconPassword.grantRead(allowlistLambda);
     rconLambda.grantInvoke(allowlistLambda);
     allowlistLambda.addToRolePolicy(

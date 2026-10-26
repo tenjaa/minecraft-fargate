@@ -49,14 +49,9 @@ export function createProfile(doc, win, auth, onExpired) {
         input.value = profile?.name ?? "";
         dirty = false;
       }
-      status.textContent = {
-        applied:
-          "Minecraft hat die Allowlist-Aktualisierung bestaetigt. Geteilte Accounts bleiben zugelassen, solange eine aktive Zuordnung besteht.",
-        pending:
-          "Synchronisation ausstehend. Bei laufendem Server wird die Allowlist normalerweise nach etwa einer Minute aktualisiert, sonst nach dem naechsten Start.",
-        failed:
-          "Minecraft konnte die Allowlist-Aktualisierung nicht bestaetigen. Gespeicherte Zuordnungen bleiben erhalten; die Synchronisation wird automatisch erneut versucht. Bei ausgeschaltetem Server erfolgt sie nach dem naechsten Start.",
-      }[value.synchronization.state];
+      status.textContent = `${
+        profile ? "Zuordnung gespeichert." : "Keine Zuordnung gespeichert."
+      } Der Status der Uebernahme in Minecraft ist hier nicht verfuegbar.`;
     } catch (error) {
       if (!active || expectedGeneration !== generation) {
         return;

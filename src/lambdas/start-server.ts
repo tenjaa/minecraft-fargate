@@ -129,6 +129,7 @@ export class StartServer {
     ) {
       const ipResponse = await this.ec2.send(
         new DescribeInstancesCommand({
+          // biome-ignore lint/style/noNonNullAssertion: we check above that there is at least one instance
           InstanceIds: [response.AutoScalingGroups[0].Instances[0].InstanceId!],
         }),
       );

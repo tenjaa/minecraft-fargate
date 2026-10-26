@@ -155,16 +155,8 @@ export function validateProfile(value) {
       (value.profile &&
         typeof value.profile.name === "string" &&
         /^[A-Za-z0-9_]{3,16}$/.test(value.profile.name) &&
-        typeof value.profile.uuid === "string" &&
-        /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(
-          value.profile.uuid,
-        ))
-    ) ||
-    !value.synchronization ||
-    !["pending", "applied", "failed"].includes(value.synchronization.state) ||
-    !(
-      value.synchronization.appliedAt === null ||
-      count(value.synchronization.appliedAt)
+        typeof value.profile.id === "string" &&
+        /^[0-9a-f]{32}$/i.test(value.profile.id))
     )
   ) {
     throw new SafeError("response");
