@@ -1,4 +1,3 @@
-import { Console } from "node:console";
 import {
   type AutoScalingClient,
   DescribeAutoScalingGroupsCommand,
@@ -20,7 +19,6 @@ import type {
   APIGatewayProxyHandlerV2WithJWTAuthorizer,
   APIGatewayProxyStructuredResultV2,
 } from "aws-lambda";
-import type { EmbeddedMetricFormat } from "./embedded-metric-format.ts";
 import { isMinecraftReady } from "./minecraft-status.ts";
 
 interface Props {
@@ -32,17 +30,13 @@ interface Props {
 }
 
 export class StartServer {
-  private readonly emf: Console["log"];
-
   constructor(
     private readonly autoScaling: AutoScalingClient,
     private readonly ecs: ECSClient,
     private readonly s3: S3Client,
     private readonly ec2: EC2Client,
     private readonly props: Props,
-  ) {
-    this.emf = new Console({ stdout: process.stdout }).log;
-  }
+  ) {}
 
   public handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (
     event,
@@ -56,30 +50,11 @@ export class StartServer {
       };
     }
     if (method === "POST") {
+      console.log(
+        `Starting Minecraft server for user ${event.requestContext.authorizer.jwt.claims.email}...`,
+      );
       await this.scaleAsg();
       await this.startEcsTask();
-      const email = event.requestContext.authorizer.jwt.claims.email;
-
-      const cwMetricsLogs: EmbeddedMetricFormat = {
-        _aws: {
-          Timestamp: event.requestContext.timeEpoch,
-          CloudWatchMetrics: [
-            {
-              Namespace: "Minecraft",
-              Dimensions: [["User"]],
-              Metrics: [
-                {
-                  Name: "started",
-                  Unit: "Count",
-                },
-              ],
-            },
-          ],
-        },
-        started: 1,
-        User: email,
-      };
-      this.emf(JSON.stringify(cwMetricsLogs));
     }
     const modList = await this.listMods();
     const ec2State = await this.getEc2State();
