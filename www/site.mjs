@@ -138,16 +138,94 @@ export async function fetchServer(
   fetcher = fetch,
   method = "GET",
 ) {
+  return fetchAuthenticated(
+    config.apiUrl,
+    token,
+    fetcher,
+    method,
+    validateServer,
+  );
+}
+
+export function validateProfile(value) {
+  if (
+    !value ||
+    !(
+      value.profile === null ||
+      (value.profile &&
+        typeof value.profile.name === "string" &&
+        /^[A-Za-z0-9_]{3,16}$/.test(value.profile.name) &&
+        typeof value.profile.uuid === "string" &&
+        /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(
+          value.profile.uuid,
+        ))
+    ) ||
+    !value.synchronization ||
+    !["pending", "applied", "failed"].includes(value.synchronization.state) ||
+    !(
+      value.synchronization.appliedAt === null ||
+      count(value.synchronization.appliedAt)
+    )
+  ) {
+    throw new SafeError("response");
+  }
+  return value;
+}
+
+export async function fetchProfile(
+  config,
+  token,
+  fetcher = fetch,
+  method = "GET",
+  payload,
+) {
+  return fetchAuthenticated(
+    new URL("profile", config.apiUrl).href,
+    token,
+    fetcher,
+    method,
+    validateProfile,
+    payload,
+  );
+}
+
+async function fetchAuthenticated(
+  url,
+  token,
+  fetcher,
+  method,
+  validate,
+  payload,
+) {
   let response;
   try {
-    response = await fetcher(config.apiUrl, {
+    response = await fetcher(url, {
       method,
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(payload === undefined
+          ? {}
+          : { "Content-Type": "application/json" }),
+      },
+      body: payload === undefined ? undefined : JSON.stringify(payload),
       credentials: "omit",
       cache: "no-store",
     });
   } catch {
     throw new SafeError("network");
+  }
+  if (response.status === 400) {
+    let error;
+    try {
+      error = await response.json();
+    } catch {
+      throw new SafeError("response");
+    }
+    throw new SafeError(
+      ["invalid-name", "unknown-player"].includes(error?.code)
+        ? error.code
+        : "response",
+    );
   }
   if (response.status === 401 || response.status === 403) {
     throw new SafeError("expired");
@@ -156,7 +234,7 @@ export async function fetchServer(
     throw new SafeError("server");
   }
   try {
-    return validateServer(await response.json());
+    return validate(await response.json());
   } catch {
     throw new SafeError("response");
   }

@@ -10,6 +10,7 @@ import {
 import { HttpUserPoolAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import { FeaturePlan, UserPool } from "aws-cdk-lib/aws-cognito";
+import type { TableV2 } from "aws-cdk-lib/aws-dynamodb";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
 import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
@@ -20,6 +21,8 @@ import {
   LogDriver,
   NetworkMode,
 } from "aws-cdk-lib/aws-ecs";
+import { Rule, Schedule } from "aws-cdk-lib/aws-events";
+import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
@@ -35,10 +38,16 @@ import NODE_LAMBDA_RUNTIME = Build.NODE_LAMBDA_RUNTIME;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export class MinecraftStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(
+    scope: Construct,
+    id: string,
+    props: cdk.StackProps & { table: TableV2 },
+  ) {
     super(scope, id, props);
 
-    const opUsername = new CfnParameter(this, "opUsername");
+    const opUsername = new CfnParameter(this, "opUsername", {
+      allowedPattern: "[A-Za-z0-9_]{3,16}",
+    });
     const duckDnsSubDomain = new CfnParameter(this, "duckDnsSubDomain");
     const duckDnsToken: ssm.IParameter =
       StringParameter.fromSecureStringParameterAttributes(
@@ -49,6 +58,14 @@ export class MinecraftStack extends cdk.Stack {
           version: 1,
         },
       );
+
+    const rconPassword = StringParameter.fromSecureStringParameterAttributes(
+      this,
+      "RconPassword",
+      {
+        parameterName: "/minecraft/rcon-password",
+      },
+    );
 
     const bucket = new Bucket(this, "serverDataBucket", {
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
@@ -75,6 +92,18 @@ export class MinecraftStack extends cdk.Stack {
       securityGroupName: "mc-service-securityGroup",
     });
     securityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(25565));
+    const rconSecurityGroup = new ec2.SecurityGroup(this, "rcon-secGroup", {
+      vpc,
+      allowAllOutbound: false,
+      disableInlineRules: true,
+      description: "RCON executor: only connect to the Minecraft RCON port",
+    });
+    securityGroup.addIngressRule(
+      rconSecurityGroup,
+      ec2.Port.tcp(25575),
+      "RCON only from the executor Lambda",
+    );
+    rconSecurityGroup.addEgressRule(securityGroup, ec2.Port.tcp(25575));
 
     const cluster = new ecs.Cluster(this, "mc-cluster", {
       vpc: vpc,
@@ -143,9 +172,11 @@ export class MinecraftStack extends cdk.Stack {
         CLUSTER_ARN: cluster.clusterArn,
         DUCK_DNS_DOMAIN: duckDnsSubDomain.valueAsString,
         OP_USERNAME: opUsername.valueAsString,
+        AWS_DEFAULT_REGION: this.region,
       },
       secrets: {
         DUCK_DNS_TOKEN: ecs.Secret.fromSsmParameter(duckDnsToken),
+        RCON_PASSWORD: ecs.Secret.fromSsmParameter(rconPassword),
       },
       logging: LogDriver.awsLogs({
         streamPrefix: "mc-logs",
@@ -154,9 +185,10 @@ export class MinecraftStack extends cdk.Stack {
       stopTimeout: cdk.Duration.seconds(120),
       memoryReservationMiB: 1500,
     });
-    containerDefinition.addPortMappings({
-      containerPort: 25565,
-    });
+    containerDefinition.addPortMappings(
+      { containerPort: 25565 },
+      { containerPort: 25575 },
+    );
 
     const mcService = new ecs.Ec2Service(this, "service", {
       cluster: cluster,
@@ -263,11 +295,127 @@ export class MinecraftStack extends cdk.Stack {
       },
     });
 
+    const profileEnvironment = {
+      PROFILE_TABLE: props.table.tableName,
+      USER_POOL_ID: userPool.userPoolId,
+      OP_USERNAME: opUsername.valueAsString,
+    };
+    const rconLambda = new NodejsFunction(this, "mc-rcon", {
+      entry: path.join(__dirname, "..", "src", "rcon.handler.ts"),
+      runtime: NODE_LAMBDA_RUNTIME,
+      architecture: lambda.Architecture.ARM_64,
+      timeout: Duration.seconds(30),
+      memorySize: 256,
+      logRetention: RetentionDays.ONE_WEEK,
+      vpc,
+      // No public IP or internet access is needed: this function only uses RCON.
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+      allowPublicSubnet: true,
+      securityGroups: [rconSecurityGroup],
+    });
+    const profileLambda = new NodejsFunction(this, "mc-profile", {
+      entry: path.join(__dirname, "..", "src", "profile.handler.ts"),
+      runtime: NODE_LAMBDA_RUNTIME,
+      architecture: lambda.Architecture.ARM_64,
+      timeout: Duration.seconds(29),
+      memorySize: 256,
+      logRetention: RetentionDays.ONE_WEEK,
+      environment: profileEnvironment,
+      bundling: { bundleAwsSDK: true },
+    });
+    const allowlistLambda = new NodejsFunction(this, "mc-allowlist", {
+      entry: path.join(__dirname, "..", "src", "allowlist.handler.ts"),
+      runtime: NODE_LAMBDA_RUNTIME,
+      architecture: lambda.Architecture.ARM_64,
+      timeout: Duration.seconds(55),
+      reservedConcurrentExecutions: 1,
+      memorySize: 256,
+      logRetention: RetentionDays.ONE_WEEK,
+      environment: {
+        ...profileEnvironment,
+        MC_CLUSTER: cluster.clusterArn,
+        MC_SERVICE_NAME: mcService.serviceName,
+        RCON_FUNCTION: rconLambda.functionName,
+        RCON_PASSWORD_PARAMETER: rconPassword.parameterName,
+      },
+      bundling: { bundleAwsSDK: true },
+    });
+    for (const fn of [profileLambda, allowlistLambda]) {
+      props.table.grantReadData(fn);
+      fn.addToRolePolicy(
+        new PolicyStatement({
+          actions: ["cognito-idp:AdminGetUser"],
+          resources: [userPool.userPoolArn],
+        }),
+      );
+    }
+    profileLambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ["dynamodb:PutItem", "dynamodb:DeleteItem"],
+        resources: [props.table.tableArn],
+        conditions: {
+          "ForAllValues:StringEquals": { "dynamodb:LeadingKeys": ["PROFILES"] },
+        },
+      }),
+    );
+    allowlistLambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ["dynamodb:PutItem"],
+        resources: [props.table.tableArn],
+        conditions: {
+          "ForAllValues:StringEquals": { "dynamodb:LeadingKeys": ["SYNC"] },
+        },
+      }),
+    );
+    rconPassword.grantRead(allowlistLambda);
+    rconLambda.grantInvoke(allowlistLambda);
+    allowlistLambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ["ecs:ListTasks"],
+        resources: ["*"],
+        conditions: { ArnEquals: { "ecs:cluster": cluster.clusterArn } },
+      }),
+    );
+    for (const [action, resource] of [
+      ["ecs:DescribeTasks", "task"],
+      ["ecs:DescribeContainerInstances", "container-instance"],
+    ]) {
+      allowlistLambda.addToRolePolicy(
+        new PolicyStatement({
+          actions: [action],
+          resources: [
+            this.formatArn({
+              service: "ecs",
+              resource,
+              resourceName: `${cluster.clusterName}/*`,
+              arnFormat: cdk.ArnFormat.SLASH_RESOURCE_NAME,
+            }),
+          ],
+          conditions: { ArnEquals: { "ecs:cluster": cluster.clusterArn } },
+        }),
+      );
+    }
+    allowlistLambda.addToRolePolicy(
+      new PolicyStatement({
+        actions: ["ec2:DescribeInstances"],
+        resources: ["*"],
+      }),
+    );
+    new Rule(this, "AllowlistSchedule", {
+      schedule: Schedule.rate(Duration.minutes(1)),
+      targets: [new LambdaFunction(allowlistLambda)],
+    });
+
     const httpApi = new HttpApi(this, "Api", {
       corsPreflight: {
-        allowHeaders: ["Authorization"],
+        allowHeaders: ["Authorization", "Content-Type"],
         allowOrigins: ["https://tenjaa.github.io"],
-        allowMethods: [CorsHttpMethod.GET, CorsHttpMethod.POST],
+        allowMethods: [
+          CorsHttpMethod.GET,
+          CorsHttpMethod.POST,
+          CorsHttpMethod.PUT,
+          CorsHttpMethod.DELETE,
+        ],
         maxAge: Duration.hours(1),
       },
       defaultAuthorizer: new HttpUserPoolAuthorizer("Authorizer", userPool, {
@@ -281,6 +429,14 @@ export class MinecraftStack extends cdk.Stack {
       integration: new HttpLambdaIntegration(
         "LambdaIntegration",
         startServerLambda,
+      ),
+    });
+    httpApi.addRoutes({
+      methods: [HttpMethod.GET, HttpMethod.PUT, HttpMethod.DELETE],
+      path: "/profile",
+      integration: new HttpLambdaIntegration(
+        "ProfileIntegration",
+        profileLambda,
       ),
     });
 

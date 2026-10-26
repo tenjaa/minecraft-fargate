@@ -1,4 +1,5 @@
 import { createAuth } from "./auth.mjs";
+import { createProfile } from "./profile.mjs";
 import { SafeError, safeDownloadUrl, scrubFragment } from "./site.mjs";
 
 export function renderServer(doc, value) {
@@ -51,6 +52,7 @@ export async function startServer(
 ) {
   scrubFragment(win);
   let auth;
+  let profile;
   const status = doc.getElementById("status");
   const refresh = doc.getElementById("refresh");
   const start = doc.getElementById("start");
@@ -144,6 +146,7 @@ export async function startServer(
   }
 
   function requireLogin() {
+    profile?.stop();
     polling = false;
     clearTimers();
     details.hidden = true;
@@ -296,6 +299,7 @@ export async function startServer(
   logout.addEventListener("click", () => {
     try {
       auth?.clear();
+      profile?.stop();
       clearTimers();
       active = false;
       generation += 1;
@@ -309,6 +313,7 @@ export async function startServer(
     }
   });
   win.addEventListener("pagehide", () => {
+    profile?.stop();
     active = false;
     generation += 1;
     busy = false;
@@ -338,6 +343,9 @@ export async function startServer(
       try {
         auth?.restore();
         loadStartup();
+        if (auth?.hasSession()) {
+          profile?.start();
+        }
       } catch {
         requireLogin();
         status.textContent =
@@ -361,6 +369,8 @@ export async function startServer(
     return;
   }
   logout.disabled = false;
+  profile = createProfile(doc, win, auth, requireLogin);
+  profile.start();
   await update();
 }
 

@@ -1,2 +1,6 @@
 [tools]
 node = "24"
+
+[tasks.validate]
+description = "Type-check, check formatting/linting and Bash syntax"
+run = "npx tsc && npx biome ci && bash -n image/scripts/init.sh image/scripts/wrapper.sh image/scripts/backup.sh"

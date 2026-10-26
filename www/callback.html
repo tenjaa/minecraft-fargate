@@ -53,7 +53,26 @@
         </div>
         <noscript><p class="status">Bitte aktiviere JavaScript, um den Serverstatus abzurufen.</p></noscript>
       </section>
-      <footer>Anmeldung bis zu 7 Tage in diesem Tab · Automatischer Statuscheck nur waehrend des Starts</footer>
+      <section id="profile-section" class="card profile-card" aria-labelledby="profile-title" hidden>
+        <div class="card-heading">
+          <div><span class="step">03 / Profil</span><h2 id="profile-title">Mein Minecraft-Account</h2></div>
+        </div>
+        <p id="profile-current"></p>
+        <p class="hint">Verknuepfe deinen eigenen Minecraft-Java-Account fuer den Serverzugang. Wir pruefen, ob der Account existiert, aber nicht dessen Besitz. Ein Account pro Benutzer; geteilte Zuordnungen sind moeglich.</p>
+        <p class="hint">Nach einer Minecraft-Namensaenderung bitte den neuen Namen speichern. Die Server-Konsole arbeitet mit Spielernamen.</p>
+        <form id="profile-form">
+          <label for="minecraft-name">Minecraft-Username</label>
+          <input id="minecraft-name" name="minecraft-name" type="text" minlength="3" maxlength="16" pattern="[A-Za-z0-9_]{3,16}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="profile-status" required disabled />
+          <div class="actions">
+            <button id="profile-save" type="submit" disabled>Speichern</button>
+            <button id="profile-remove" class="secondary" type="button" disabled>Verknuepfung entfernen</button>
+            <button id="profile-refresh" class="secondary" type="button" disabled>Zuordnung aktualisieren</button>
+          </div>
+        </form>
+        <p id="profile-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+        <p class="hint">Beim Wechseln oder Entfernen wird der alte Account ausgeschlossen, sofern keine andere aktive Zuordnung besteht. Bereits verbundene Spieler werden dann getrennt. Der konfigurierte Operator behaelt seinen Zugang.</p>
+      </section>
+      <footer>Anmeldung bis zu 7 Tage in diesem Tab · Serverstatus automatisch waehrend des Starts · Allowlist-Status alle 30 Sekunden</footer>
     </main>
   </body>
 </html>

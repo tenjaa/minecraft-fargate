@@ -1,6 +1,7 @@
 import {
   cognito,
   SITE_CONFIG as config,
+  fetchProfile,
   fetchServer,
   SafeError,
   validToken,
@@ -183,7 +184,8 @@ export function createAuth(storage, fetcher = fetch) {
     return pending;
   }
 
-  async function request(method = "GET") {
+  async function request(method = "GET", resource = "server", payload) {
+    const fetchResource = resource === "profile" ? fetchProfile : fetchServer;
     const expectedGeneration = generation;
     assertActive(expectedGeneration);
     if (session.expiresAt <= Date.now() + REFRESH_MARGIN) {
@@ -192,7 +194,13 @@ export function createAuth(storage, fetcher = fetch) {
     assertActive(expectedGeneration);
     const token = session.idToken;
     try {
-      const result = await fetchServer(config, token, fetcher, method);
+      const result = await fetchResource(
+        config,
+        token,
+        fetcher,
+        method,
+        payload,
+      );
       assertActive(expectedGeneration);
       return result;
     } catch (error) {
@@ -204,11 +212,12 @@ export function createAuth(storage, fetcher = fetch) {
     await refresh(expectedGeneration, token);
     assertActive(expectedGeneration);
     try {
-      const result = await fetchServer(
+      const result = await fetchResource(
         config,
         session.idToken,
         fetcher,
         method,
+        payload,
       );
       assertActive(expectedGeneration);
       return result;

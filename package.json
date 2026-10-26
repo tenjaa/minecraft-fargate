@@ -25,10 +25,17 @@
   "dependencies": {
     "@aws-cdk/app-staging-synthesizer-alpha": "^2.273.0-alpha.0",
     "@aws-sdk/client-auto-scaling": "^3.1152.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.1156.0",
+    "@aws-sdk/client-dynamodb": "^3.1156.0",
     "@aws-sdk/client-ec2": "^3.1152.0",
     "@aws-sdk/client-ecs": "^3.1152.0",
+    "@aws-sdk/client-lambda": "^3.1156.0",
     "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/client-ssm": "^3.1156.0",
+    "@aws-sdk/lib-dynamodb": "^3.1156.0",
     "@aws-sdk/s3-request-presigner": "^3.1152.0",
-    "oidc-client-ts": "^3.5.0"
+    "dynamodb-toolbox": "^2.11.1",
+    "oidc-client-ts": "^3.5.0",
+    "rcon-client": "^4.2.5"
   }
 }

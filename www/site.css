@@ -74,6 +74,9 @@ p {
   align-items: center;
   justify-content: space-between;
 }
+.profile-card {
+  margin-top: 28px;
+}
 .badge {
   border: 1px solid var(--border);
   color: var(--accent);
@@ -119,6 +122,9 @@ button,
 form button {
   width: 100%;
   margin-top: 16px;
+}
+.profile-card form button {
+  width: auto;
 }
 button:hover:not(:disabled),
 .button:hover {
