@@ -1,6 +1,6 @@
 import { isIPv4 } from "node:net";
 import { Rcon } from "rcon-client";
-import { type MinecraftProfile, minecraftName } from "./minecraft-profile.ts";
+import { type MinecraftProfile, minecraftName } from "../minecraft-profile.ts";
 
 interface RconRequest {
   host: string;

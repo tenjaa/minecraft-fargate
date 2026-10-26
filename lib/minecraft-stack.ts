@@ -21,8 +21,6 @@ import {
   LogDriver,
   NetworkMode,
 } from "aws-cdk-lib/aws-ecs";
-import { Rule, Schedule } from "aws-cdk-lib/aws-events";
-import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
@@ -210,7 +208,13 @@ export class MinecraftStack extends cdk.Stack {
 
     const startServerLambda = new NodejsFunction(this, "mc-start-server", {
       functionName: "start-server",
-      entry: path.join(__dirname, "..", "src", "start-server.handler.ts"),
+      entry: path.join(
+        __dirname,
+        "..",
+        "src",
+        "lambdas",
+        "start-server.handler.ts",
+      ),
       runtime: NODE_LAMBDA_RUNTIME,
       environment: {
         BUCKET: bucket.bucketName,
@@ -301,7 +305,7 @@ export class MinecraftStack extends cdk.Stack {
       OP_USERNAME: opUsername.valueAsString,
     };
     const rconLambda = new NodejsFunction(this, "mc-rcon", {
-      entry: path.join(__dirname, "..", "src", "rcon.handler.ts"),
+      entry: path.join(__dirname, "..", "src", "lambdas", "rcon.handler.ts"),
       runtime: NODE_LAMBDA_RUNTIME,
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.seconds(30),
@@ -314,7 +318,7 @@ export class MinecraftStack extends cdk.Stack {
       securityGroups: [rconSecurityGroup],
     });
     const profileLambda = new NodejsFunction(this, "mc-profile", {
-      entry: path.join(__dirname, "..", "src", "profile.handler.ts"),
+      entry: path.join(__dirname, "..", "src", "lambdas", "profile.handler.ts"),
       runtime: NODE_LAMBDA_RUNTIME,
       architecture: lambda.Architecture.ARM_64,
       timeout: Duration.seconds(29),
@@ -401,10 +405,10 @@ export class MinecraftStack extends cdk.Stack {
         resources: ["*"],
       }),
     );
-    new Rule(this, "AllowlistSchedule", {
-      schedule: Schedule.rate(Duration.minutes(1)),
-      targets: [new LambdaFunction(allowlistLambda)],
-    });
+    // new Rule(this, "AllowlistSchedule", {
+    //   schedule: Schedule.rate(Duration.minutes(1)),
+    //   targets: [new LambdaFunction(allowlistLambda)],
+    // });
 
     const httpApi = new HttpApi(this, "Api", {
       corsPreflight: {

@@ -7,8 +7,8 @@ import {
   ProfileError,
   resolveMinecraftProfile,
   synchronizationStatus,
-} from "./allowlist.ts";
-import { getProfile, removeProfile, saveProfile } from "./profiles.ts";
+} from "../allowlist.ts";
+import { getProfile, removeProfile, saveProfile } from "../profiles.ts";
 
 function response(
   statusCode: number,

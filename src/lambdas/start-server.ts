@@ -19,7 +19,7 @@ import type {
   APIGatewayProxyHandlerV2WithJWTAuthorizer,
   APIGatewayProxyStructuredResultV2,
 } from "aws-lambda";
-import { isMinecraftReady } from "./minecraft-status.ts";
+import { isMinecraftReady } from "../minecraft-status.ts";
 
 interface Props {
   bucket: string;
