@@ -24,7 +24,12 @@
           "fix": "safe"
         }
       },
-      "style": { "noNonNullAssertion": "off" }
+      "style": {
+        "noNonNullAssertion": "off",
+        "noParameterAssign": "error",
+        "noDefaultExport": "error",
+        "useBlockStatements": "error"
+      }
     }
   },
   "javascript": {

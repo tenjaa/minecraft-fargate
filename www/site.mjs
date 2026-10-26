@@ -9,7 +9,9 @@ export class SafeError extends Error {
 }
 
 function awsUrl(value, hostPattern) {
-  if (typeof value !== "string") return false;
+  if (typeof value !== "string") {
+    return false;
+  }
   try {
     const url = new URL(value);
     return (
@@ -67,14 +69,20 @@ export async function cognito(config, action, payload, fetcher = fetch) {
   if (!response.ok) {
     const type =
       typeof result?.__type === "string" ? result.__type.split("#").pop() : "";
-    if (type === "CodeMismatchException") throw new SafeError("code");
-    if (type === "ExpiredCodeException" || type === "NotAuthorizedException")
+    if (type === "CodeMismatchException") {
+      throw new SafeError("code");
+    }
+    if (type === "ExpiredCodeException" || type === "NotAuthorizedException") {
       throw new SafeError("expired");
-    if (response.status >= 500) throw new SafeError("network");
+    }
+    if (response.status >= 500) {
+      throw new SafeError("network");
+    }
     throw new SafeError("auth");
   }
-  if (!result || typeof result !== "object" || Array.isArray(result))
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
     throw new SafeError("auth");
+  }
   return result;
 }
 
@@ -141,9 +149,12 @@ export async function fetchServer(
   } catch {
     throw new SafeError("network");
   }
-  if (response.status === 401 || response.status === 403)
+  if (response.status === 401 || response.status === 403) {
     throw new SafeError("expired");
-  if (!response.ok) throw new SafeError("server");
+  }
+  if (!response.ok) {
+    throw new SafeError("server");
+  }
   try {
     return validateServer(await response.json());
   } catch {

@@ -61,7 +61,9 @@ function load(storage) {
   } catch {
     throw new SafeError("storage");
   }
-  if (raw === null) return undefined;
+  if (raw === null) {
+    return undefined;
+  }
   let session;
   try {
     session = JSON.parse(raw);
@@ -117,22 +119,30 @@ export function createAuth(storage, fetcher = fetch) {
   }
 
   function hasSession() {
-    if (session && session.refreshExpiresAt <= Date.now()) clear();
+    if (session && session.refreshExpiresAt <= Date.now()) {
+      clear();
+    }
     return Boolean(session);
   }
 
   function assertActive(expectedGeneration) {
-    if (generation !== expectedGeneration || !session)
+    if (generation !== expectedGeneration || !session) {
       throw new SafeError("expired");
-    if (!hasSession()) throw new SafeError("expired");
+    }
+    if (!hasSession()) {
+      throw new SafeError("expired");
+    }
   }
 
   function refresh(expectedGeneration, rejectedToken) {
     assertActive(expectedGeneration);
-    if (refreshing) return refreshing;
+    if (refreshing) {
+      return refreshing;
+    }
     // Another request may already have replaced the token rejected by the API.
-    if (rejectedToken && session.idToken !== rejectedToken)
+    if (rejectedToken && session.idToken !== rejectedToken) {
       return Promise.resolve();
+    }
     const current = session;
     const pending = (async () => {
       try {
@@ -155,12 +165,18 @@ export function createAuth(storage, fetcher = fetch) {
         store(storage, next);
         session = next;
       } catch (error) {
-        if (generation !== expectedGeneration) throw new SafeError("expired");
-        if (error.kind === "network" || error.kind === "storage") throw error;
+        if (generation !== expectedGeneration) {
+          throw new SafeError("expired");
+        }
+        if (error.kind === "network" || error.kind === "storage") {
+          throw error;
+        }
         clear();
         throw new SafeError("expired");
       } finally {
-        if (refreshing === pending) refreshing = undefined;
+        if (refreshing === pending) {
+          refreshing = undefined;
+        }
       }
     })();
     refreshing = pending;
@@ -170,8 +186,9 @@ export function createAuth(storage, fetcher = fetch) {
   async function request(method = "GET") {
     const expectedGeneration = generation;
     assertActive(expectedGeneration);
-    if (session.expiresAt <= Date.now() + REFRESH_MARGIN)
+    if (session.expiresAt <= Date.now() + REFRESH_MARGIN) {
       await refresh(expectedGeneration);
+    }
     assertActive(expectedGeneration);
     const token = session.idToken;
     try {
@@ -180,7 +197,9 @@ export function createAuth(storage, fetcher = fetch) {
       return result;
     } catch (error) {
       assertActive(expectedGeneration);
-      if (error.kind !== "expired") throw error;
+      if (error.kind !== "expired") {
+        throw error;
+      }
     }
     await refresh(expectedGeneration, token);
     assertActive(expectedGeneration);

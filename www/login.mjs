@@ -34,7 +34,9 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
   function reset(preserveEmail = false) {
     session = undefined;
     username = undefined;
-    if (!preserveEmail) emailForm.reset();
+    if (!preserveEmail) {
+      emailForm.reset();
+    }
     codeForm.reset();
     submittedEmail.textContent = "";
     emailForm.hidden = false;
@@ -44,14 +46,19 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
   function redirectSavedSession() {
     let hasSession;
     try {
-      if (auth) auth.restore();
-      else auth = createAuth(win.sessionStorage, fetcher);
+      if (auth) {
+        auth.restore();
+      } else {
+        auth = createAuth(win.sessionStorage, fetcher);
+      }
       hasSession = auth.hasSession();
     } catch {
       status.textContent = storageMessage;
       return;
     }
-    if (!hasSession) return;
+    if (!hasSession) {
+      return;
+    }
     generation += 1;
     active = false;
     session = undefined;
@@ -62,7 +69,9 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
   }
 
   function finish(result) {
-    if (!active) return;
+    if (!active) {
+      return;
+    }
     let storage;
     try {
       storage = win.sessionStorage;
@@ -79,7 +88,9 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
 
   emailForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (busy || !active) return;
+    if (busy || !active) {
+      return;
+    }
     const requestGeneration = generation;
     setBusy(true);
     session = undefined;
@@ -99,7 +110,9 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
         },
         fetcher,
       );
-      if (!active || requestGeneration !== generation) return;
+      if (!active || requestGeneration !== generation) {
+        return;
+      }
       if (result.ChallengeName === "SELECT_CHALLENGE") {
         if (
           !result.AvailableChallenges?.includes("EMAIL_OTP") ||
@@ -119,7 +132,9 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
           fetcher,
         );
       }
-      if (!active || requestGeneration !== generation) return;
+      if (!active || requestGeneration !== generation) {
+        return;
+      }
       if (result.AuthenticationResult) {
         finish(result);
         return;
@@ -133,7 +148,9 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
       }
       session = result.Session;
     } catch (error) {
-      if (!active || requestGeneration !== generation) return;
+      if (!active || requestGeneration !== generation) {
+        return;
+      }
       if (error.kind === "network" || error.kind === "storage") {
         status.textContent =
           error.kind === "network"
@@ -142,9 +159,13 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
         return;
       }
     } finally {
-      if (requestGeneration === generation) setBusy(false);
+      if (requestGeneration === generation) {
+        setBusy(false);
+      }
     }
-    if (!active || requestGeneration !== generation) return;
+    if (!active || requestGeneration !== generation) {
+      return;
+    }
     submittedEmail.textContent = username;
     emailForm.hidden = true;
     codeForm.hidden = false;
@@ -154,12 +175,16 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
 
   codeForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (busy || !active) return;
+    if (busy || !active) {
+      return;
+    }
     const requestGeneration = generation;
     setBusy(true);
     status.textContent = "Code wird geprueft ...";
     try {
-      if (!session) throw new SafeError("code");
+      if (!session) {
+        throw new SafeError("code");
+      }
       const result = await cognito(
         config,
         "RespondToAuthChallenge",
@@ -174,11 +199,17 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
         },
         fetcher,
       );
-      if (!active || requestGeneration !== generation) return;
-      if (typeof result.Session === "string") session = result.Session;
+      if (!active || requestGeneration !== generation) {
+        return;
+      }
+      if (typeof result.Session === "string") {
+        session = result.Session;
+      }
       finish(result);
     } catch (error) {
-      if (!active || requestGeneration !== generation) return;
+      if (!active || requestGeneration !== generation) {
+        return;
+      }
       if (error.kind === "expired") {
         session = undefined;
         status.textContent =
@@ -195,12 +226,16 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
       code.value = "";
       code.focus();
     } finally {
-      if (requestGeneration === generation) setBusy(false);
+      if (requestGeneration === generation) {
+        setBusy(false);
+      }
     }
   });
 
   doc.getElementById("restart").addEventListener("click", () => {
-    if (busy) return;
+    if (busy) {
+      return;
+    }
     reset(true);
     status.textContent = "Fordere einen neuen Code an.";
     email.focus();
@@ -226,4 +261,6 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
   redirectSavedSession();
 }
 
-if (typeof document !== "undefined") startLogin();
+if (typeof document !== "undefined") {
+  startLogin();
+}

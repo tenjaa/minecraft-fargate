@@ -10,8 +10,9 @@ export function renderServer(doc, value) {
       "service-state",
       `${value.serviceState.running} aktiv · ${value.serviceState.pending} im Start`,
     ],
-  ])
+  ]) {
     doc.getElementById(id).textContent = content;
+  }
   const clients = doc.getElementById("client-mods");
   const servers = doc.getElementById("server-mods");
   clients.replaceChildren();
@@ -20,7 +21,9 @@ export function renderServer(doc, value) {
     const item = doc.createElement("li");
     const link = doc.createElement("a");
     const url = safeDownloadUrl(mod.url);
-    if (!url) continue;
+    if (!url) {
+      continue;
+    }
     link.href = url;
     link.rel = "noreferrer noopener";
     link.textContent = mod.name;
@@ -94,8 +97,11 @@ export async function startServer(
   function saveStartup(value) {
     startup = value;
     try {
-      if (value) win.sessionStorage.setItem(startupKey, JSON.stringify(value));
-      else win.sessionStorage.removeItem(startupKey);
+      if (value) {
+        win.sessionStorage.setItem(startupKey, JSON.stringify(value));
+      } else {
+        win.sessionStorage.removeItem(startupKey);
+      }
     } catch {
       throw new SafeError("storage");
     }
@@ -117,7 +123,9 @@ export async function startServer(
 
   function scheduleRefresh() {
     clearTimers();
-    if (!active || !polling) return;
+    if (!active || !polling) {
+      return;
+    }
     if (!auth?.hasSession()) {
       requireLogin();
       return;
@@ -149,7 +157,9 @@ export async function startServer(
       "Dein Zugang fehlt oder ist abgelaufen. Bitte melde dich erneut an.";
   }
   async function update(method = "GET") {
-    if (!active || busy) return;
+    if (!active || busy) {
+      return;
+    }
     if (!auth?.hasSession()) {
       requireLogin();
       return;
@@ -174,15 +184,21 @@ export async function startServer(
         canStart = false;
       }
       const value = await auth.request(method);
-      if (!active || requestGeneration !== generation) return;
+      if (!active || requestGeneration !== generation) {
+        return;
+      }
       renderServer(doc, value);
       address = value.address;
       copy.disabled = false;
       details.hidden = false;
       polling = !value.ready && value.serviceState.desired > 0;
       if (polling) {
-        if (!startup) saveStartup({ since: Date.now(), requested: false });
-      } else saveStartup(undefined);
+        if (!startup) {
+          saveStartup({ since: Date.now(), requested: false });
+        }
+      } else {
+        saveStartup(undefined);
+      }
       showStartupWarning();
       canStart =
         !value.ready &&
@@ -220,17 +236,21 @@ export async function startServer(
           : "Sobald der Server ausgeschaltet ist, kannst du ihn wieder starten.";
       }
     } catch (error) {
-      if (!active || requestGeneration !== generation) return;
-      if (error.kind === "expired") requireLogin();
-      else if (error.kind === "storage")
+      if (!active || requestGeneration !== generation) {
+        return;
+      }
+      if (error.kind === "expired") {
+        requireLogin();
+      } else if (error.kind === "storage") {
         status.textContent =
           "Der Sitzungsspeicher ist nicht verfuegbar. Bitte erlaube ihn im Browser und lade die Seite erneut.";
-      else if (error.kind === "response")
+      } else if (error.kind === "response") {
         status.textContent =
           "Die Serverantwort konnte nicht sicher gelesen werden. Bitte versuche es erneut.";
-      else
+      } else {
         status.textContent =
           "Der Server ist gerade nicht erreichbar. Bitte pruefe deine Verbindung und versuche es erneut.";
+      }
     } finally {
       if (requestGeneration === generation) {
         busy = false;
@@ -245,21 +265,30 @@ export async function startServer(
   }
   refresh.addEventListener("click", () => update());
   start.addEventListener("click", () => {
-    if (canStart) return update("POST");
+    if (canStart) {
+      return update("POST");
+    }
   });
   copy.addEventListener("click", async () => {
-    if (!active || !auth?.hasSession() || !address) return;
+    if (!active || !auth?.hasSession() || !address) {
+      return;
+    }
     const requestGeneration = generation;
     copyStatus.hidden = false;
     copyStatus.textContent = "Adresse wird kopiert ...";
     try {
-      if (!win.navigator?.clipboard?.writeText)
+      if (!win.navigator?.clipboard?.writeText) {
         throw new Error("Clipboard unavailable");
+      }
       await win.navigator.clipboard.writeText(address);
-      if (!active || requestGeneration !== generation) return;
+      if (!active || requestGeneration !== generation) {
+        return;
+      }
       copyStatus.textContent = "Server-Adresse kopiert.";
     } catch {
-      if (!active || requestGeneration !== generation) return;
+      if (!active || requestGeneration !== generation) {
+        return;
+      }
       copyStatus.textContent =
         "Kopieren ist nicht moeglich. Bitte markiere und kopiere die Server-Adresse manuell.";
     }
@@ -335,4 +364,6 @@ export async function startServer(
   await update();
 }
 
-if (typeof document !== "undefined") startServer();
+if (typeof document !== "undefined") {
+  startServer();
+}

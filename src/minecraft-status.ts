@@ -16,7 +16,9 @@ function readVarInt(buffer: Buffer, offset = 0) {
   for (let index = 0; index < 5 && offset + index < buffer.length; index++) {
     const byte = buffer[offset + index];
     value |= (byte & 0x7f) << (7 * index);
-    if (!(byte & 0x80)) return { value: value >>> 0, bytes: index + 1 };
+    if (!(byte & 0x80)) {
+      return { value: value >>> 0, bytes: index + 1 };
+    }
   }
   return undefined;
 }
@@ -27,11 +29,15 @@ export function isMinecraftReady(host: string, port = 25565, timeoutMs = 2000) {
     let received = Buffer.alloc(0);
     let settled = false;
     const finish = (ready: boolean, reason?: string) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       clearTimeout(deadline);
       socket.destroy();
-      if (reason) console.warn("Minecraft status probe:", reason);
+      if (reason) {
+        console.warn("Minecraft status probe:", reason);
+      }
       resolve(ready);
     };
     const deadline = setTimeout(() => finish(false, "timeout"), timeoutMs);
@@ -60,19 +66,25 @@ export function isMinecraftReady(host: string, port = 25565, timeoutMs = 2000) {
     });
     socket.on("end", () => finish(false, "connection closed before status"));
     socket.on("data", (chunk: Buffer) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       received = Buffer.concat([received, chunk]);
       if (received.length > 1024 * 1024) {
         finish(false, "status response too large");
         return;
       }
       const packet = readVarInt(received);
-      if (!packet) return;
+      if (!packet) {
+        return;
+      }
       if (packet.value > 1024 * 1024 || packet.value < 2) {
         finish(false, "invalid status packet length");
         return;
       }
-      if (received.length < packet.bytes + packet.value) return;
+      if (received.length < packet.bytes + packet.value) {
+        return;
+      }
       const body = received.subarray(packet.bytes, packet.bytes + packet.value);
       const id = readVarInt(body);
       const length = id && readVarInt(body, id.bytes);
