@@ -16,15 +16,20 @@ import { InstanceClass, InstanceSize, InstanceType } from "aws-cdk-lib/aws-ec2";
 import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import {
+  AwsLogDriver,
   ContainerImage,
   Ec2TaskDefinition,
-  LogDriver,
   NetworkMode,
 } from "aws-cdk-lib/aws-ecs";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction, OutputFormat } from "aws-cdk-lib/aws-lambda-nodejs";
-import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import {
+  FilterPattern,
+  RetentionDays,
+  SubscriptionFilter,
+} from "aws-cdk-lib/aws-logs";
+import { LambdaDestination } from "aws-cdk-lib/aws-logs-destinations";
 import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import type * as ssm from "aws-cdk-lib/aws-ssm";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
@@ -162,6 +167,10 @@ export class MinecraftStack extends cdk.Stack {
       platform: Platform.LINUX_ARM64,
     });
 
+    const minecraftLogging = new AwsLogDriver({
+      streamPrefix: "mc-logs",
+      logRetention: RetentionDays.ONE_WEEK,
+    });
     const containerDefinition = taskDefinition.addContainer("container", {
       image: ContainerImage.fromDockerImageAsset(asset),
       environment: {
@@ -176,10 +185,7 @@ export class MinecraftStack extends cdk.Stack {
         DUCK_DNS_TOKEN: ecs.Secret.fromSsmParameter(duckDnsToken),
         RCON_PASSWORD: ecs.Secret.fromSsmParameter(rconPassword),
       },
-      logging: LogDriver.awsLogs({
-        streamPrefix: "mc-logs",
-        logRetention: RetentionDays.ONE_WEEK,
-      }),
+      logging: minecraftLogging,
       stopTimeout: cdk.Duration.seconds(120),
       memoryReservationMiB: 1500,
     });
@@ -379,6 +385,11 @@ export class MinecraftStack extends cdk.Stack {
     props.table.grantReadWriteData(allowlistLambda);
     rconPassword.grantRead(allowlistLambda);
     rconLambda.grantInvoke(allowlistLambda);
+    profileLambda.addEnvironment(
+      "ALLOWLIST_FUNCTION",
+      allowlistLambda.functionName,
+    );
+    allowlistLambda.grantInvoke(profileLambda);
     allowlistLambda.addToRolePolicy(
       new PolicyStatement({
         actions: ["ecs:ListTasks"],
@@ -411,10 +422,12 @@ export class MinecraftStack extends cdk.Stack {
         resources: ["*"],
       }),
     );
-    // new Rule(this, "AllowlistSchedule", {
-    //   schedule: Schedule.rate(Duration.minutes(1)),
-    //   targets: [new LambdaFunction(allowlistLambda)],
-    // });
+    new SubscriptionFilter(this, "AllowlistAfterStartup", {
+      logGroup: minecraftLogging.logGroup!,
+      // ECS RUNNING happens before Minecraft is ready to accept RCON commands.
+      filterPattern: FilterPattern.literal('"RCON running on"'),
+      destination: new LambdaDestination(allowlistLambda),
+    });
 
     const httpApi = new HttpApi(this, "Api", {
       corsPreflight: {
