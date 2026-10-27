@@ -37,7 +37,7 @@ async function readWhitelist(client: Rcon) {
   if (
     !match ||
     Number(match[1]) !== names.length ||
-    new Set(names.map((name) => name.toLowerCase())).size !== names.length
+    new Set(names).size !== names.length
   ) {
     throw new Error("Unable to read Minecraft whitelist response");
   }
@@ -46,6 +46,8 @@ async function readWhitelist(client: Rcon) {
 
 // No AWS API calls here: the coordinator supplies the private IP and secret.
 export async function handler(event: unknown) {
+  // not great to log the password!
+  console.log(`RCON event: ${JSON.stringify(event)}`);
   const parsedEvent = rconAction.parse(event);
 
   switch (parsedEvent.action) {
@@ -84,12 +86,10 @@ async function handleAllowlist(event: z.infer<typeof allowlistAction>) {
       "Whitelist is already turned on",
       "Whitelist is now turned on",
     ]);
-    const desired = new Map(
-      event.usernames.map((username) => [username.toLowerCase(), username]),
-    );
+    const desired = new Set(event.usernames);
     const current = await readWhitelist(client);
     for (const name of current) {
-      if (!desired.has(name.toLowerCase())) {
+      if (!desired.has(name)) {
         await command(client, `deop ${name}`, [
           `Made ${name} no longer a server operator`,
           "Nothing changed. The player is not an operator",
@@ -99,9 +99,9 @@ async function handleAllowlist(event: z.infer<typeof allowlistAction>) {
         ]);
       }
     }
-    const existing = new Set(current.map((name) => name.toLowerCase()));
-    for (const [normalized, name] of desired) {
-      if (!existing.has(normalized)) {
+    const existing = new Set(current);
+    for (const name of desired) {
+      if (!existing.has(name)) {
         await command(client, `whitelist add ${name}`, [
           `Added ${name} to the whitelist`,
         ]);
@@ -111,7 +111,7 @@ async function handleAllowlist(event: z.infer<typeof allowlistAction>) {
     const actual = await readWhitelist(client);
     if (
       actual.length !== desired.size ||
-      !actual.every((name) => desired.has(name.toLowerCase()))
+      !actual.every((name) => desired.has(name))
     ) {
       throw new Error(
         "Minecraft whitelist does not match the desired accounts",

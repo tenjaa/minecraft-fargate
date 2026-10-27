@@ -8,8 +8,6 @@ import {
 } from "aws-cdk-lib/aws-dynamodb";
 import type { Construct } from "constructs";
 
-export const TABLE_NAME = "minecraft";
-
 export class DatabaseStack extends Stack {
   readonly table: TableV2;
 
@@ -17,7 +15,7 @@ export class DatabaseStack extends Stack {
     super(scope, id, props);
 
     this.table = new TableV2(this, "Table", {
-      tableName: TABLE_NAME,
+      tableName: "minecraft",
       partitionKey: { name: "pk", type: AttributeType.STRING },
       sortKey: { name: "sk", type: AttributeType.STRING },
       dynamoStream: StreamViewType.KEYS_ONLY,

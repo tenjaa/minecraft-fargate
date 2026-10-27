@@ -11,10 +11,10 @@ import {
   string,
   Table,
 } from "dynamodb-toolbox";
-import { TABLE_NAME } from "../../lib/database-stack.ts";
+import { loadStrict } from "../env.ts";
 
 const table = new Table({
-  name: TABLE_NAME,
+  name: loadStrict("TABLE_NAME"),
   partitionKey: { name: "pk", type: "string" },
   sortKey: { name: "sk", type: "string" },
   indexes: {

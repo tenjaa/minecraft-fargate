@@ -311,7 +311,7 @@ export class MinecraftStack extends cdk.Stack {
     });
 
     const profileEnvironment = {
-      PROFILE_TABLE: props.table.tableName,
+      TABLE_NAME: props.table.tableName,
       USER_POOL_ID: userPool.userPoolId,
       OP_USERNAME: opUsername.valueAsString,
     };
