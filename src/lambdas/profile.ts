@@ -8,11 +8,8 @@ import {
   saveProfile,
 } from "../database/entities.ts";
 import { resolveMinecraftProfile } from "../minecraft-api.ts";
-import type { RconClient } from "../rcon-client.ts";
 
 export class Profile {
-  constructor(private readonly rconClient: RconClient) {}
-
   public handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) => {
     try {
       const claims = event.requestContext.authorizer.jwt.claims;
@@ -33,7 +30,6 @@ export class Profile {
           `Saving Minecraft profile for ${username}: ${minecraftProfile.id} (${minecraftProfile.name})`,
         );
         await saveProfile(sub, minecraftProfile);
-        await this.rconClient.sendAllowlistAction(minecraftProfile.name);
         return response(200, {
           profile: minecraftProfile,
         });

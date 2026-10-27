@@ -3,6 +3,7 @@ import {
   AttributeType,
   Billing,
   Capacity,
+  StreamViewType,
   TableV2,
 } from "aws-cdk-lib/aws-dynamodb";
 import type { Construct } from "constructs";
@@ -19,6 +20,7 @@ export class DatabaseStack extends Stack {
       tableName: TABLE_NAME,
       partitionKey: { name: "pk", type: AttributeType.STRING },
       sortKey: { name: "sk", type: AttributeType.STRING },
+      dynamoStream: StreamViewType.KEYS_ONLY,
       // only provisioned capacity can use free tier
       billing: Billing.provisioned({
         readCapacity: Capacity.autoscaled({

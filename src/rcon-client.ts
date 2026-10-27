@@ -66,7 +66,12 @@ export async function initRconProps(
   ssm: SSMClient,
   ecs: ECSClient,
   ec2: EC2Client,
-): Promise<Props> {
+): Promise<Props | undefined> {
+  const host = await serverAddress(ecs, ec2);
+  if (!host) {
+    return undefined;
+  }
+
   const rconPasswordResponse = await ssm.send(
     new GetParameterCommand({
       Name: loadStrict("RCON_PASSWORD_PARAMETER"),
@@ -75,11 +80,6 @@ export async function initRconProps(
   );
   if (!rconPasswordResponse.Parameter?.Value) {
     throw new Error("RCON password not found");
-  }
-
-  const host = await serverAddress(ecs, ec2);
-  if (!host) {
-    throw new Error("Minecraft server is not running");
   }
 
   return {
@@ -95,17 +95,11 @@ export class RconClient {
     private readonly props: Props,
   ) {}
 
-  /**
-   *
-   * @param newUser dynamodb gsi might be eventually consistent, so you can force a new user to be added
-   */
-  public async sendAllowlistAction(newUser?: string) {
+  public async sendAllowlistAction() {
     const profiles = await listProfiles();
     console.log(`Found ${profiles.length} profiles in the database`);
     const usernames = profiles.map((profile) => profile.minecraftName);
-    const newUserArray = newUser ? [newUser] : [];
-
-    const uniqueUsers = [...new Set([...usernames, ...newUserArray])];
+    const uniqueUsers = [...new Set(usernames)];
     const request: AllowlistAction = {
       action: "allowlist",
       host: this.props.host,

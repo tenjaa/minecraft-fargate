@@ -23,6 +23,7 @@ import {
 } from "aws-cdk-lib/aws-ecs";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import { DynamoEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { NodejsFunction, OutputFormat } from "aws-cdk-lib/aws-lambda-nodejs";
 import {
   FilterPattern,
@@ -382,14 +383,25 @@ export class MinecraftStack extends cdk.Stack {
       );
     }
     props.table.grantReadWriteData(profileLambda);
-    props.table.grantReadWriteData(allowlistLambda);
     rconPassword.grantRead(allowlistLambda);
     rconLambda.grantInvoke(allowlistLambda);
-    profileLambda.addEnvironment(
-      "ALLOWLIST_FUNCTION",
-      allowlistLambda.functionName,
+    allowlistLambda.addEventSource(
+      new DynamoEventSource(props.table, {
+        startingPosition: lambda.StartingPosition.TRIM_HORIZON,
+        batchSize: 100,
+        maxBatchingWindow: Duration.seconds(30),
+        filters: [
+          lambda.FilterCriteria.filter({
+            eventName: ["INSERT", "MODIFY", "REMOVE"],
+            dynamodb: {
+              Keys: {
+                pk: { S: lambda.FilterRule.beginsWith("profile#") },
+              },
+            },
+          }),
+        ],
+      }),
     );
-    allowlistLambda.grantInvoke(profileLambda);
     allowlistLambda.addToRolePolicy(
       new PolicyStatement({
         actions: ["ecs:ListTasks"],
