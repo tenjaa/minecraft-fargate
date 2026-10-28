@@ -1,29 +1,25 @@
-# Minecraft (EC2) Fargate
+# Minecraft on-demand @ AWS
 
-This repository contains a AWS-CDK project that deploys a Minecraft server using AWS Fargate.
-As a private playground a big focus is on cost efficiency.
-The server is designed to be started and stopped on demand, minimizing costs when not in use.
-It is using an EC2-backed Fargate cluster to reduce expenses further.
+Your world, when you want to play.
 
-## Useful commands
-- `npx cdk deploy` - Deploy the stack to your AWS account
+A private Minecraft Java server for friends, with a simple website to get
+everyone into the game. Built for evenings of exploring, building, and picking
+up where you left off — without keeping a game server running around the clock.
 
-## RCON password
+## Less setup. More Minecraft.
 
-Before deploying, create the standard-tier SSM `SecureString` parameter once.
-CloudFormation cannot create `SecureString` parameters natively. This command
-generates a 48-character password without printing it or putting it in shell
-arguments/history:
+- **Sign in without a password.** Approved players receive a code by email.
+- **Start your world from the browser.** Watch its status while it gets ready.
+- **Copy the address and join.** No AWS console needed for players.
+- **Find the right mods.** One list with Modrinth searches for the installed mods.
+- **Save your Minecraft username.** Set up your account for server access and
+  update it when your name changes.
 
-```sh
-mise exec -- node -e 'process.stdout.write(require("node:crypto").randomBytes(24).toString("hex"))' |
-  aws ssm put-parameter --region eu-central-1 \
-    --name /minecraft/rcon-password --type SecureString --tier Standard \
-    --value file:///dev/stdin
-```
+This is a personal project for a private group, not a public hosting service.
 
-Use the default standard throughput and AWS-managed `aws/ssm` key; no Secrets
-Manager resource or customer-managed KMS key is created. ECS injects the password
-at task startup, and the outside-VPC coordinator reads it with decryption.
-Restart the ECS task after changing the parameter. Missing or invalid parameters
-fail explicitly; the password must contain exactly 48 alphanumeric characters.
+## A little about the build
+
+Runs on AWS using Amazon ECS with EC2 capacity, with infrastructure managed
+through AWS CDK. The lightweight web portal is hosted on GitHub Pages.
+
+Deployment details live in the [setup guide](docs/setup.md).
