@@ -4,7 +4,7 @@ set -e
 echo "Download backup"
 if [[ $(aws s3 ls s3://"${BUCKET}"/backup.tar | wc -l) = 1 ]]; then
   echo "Backup found"
-  aws s3 cp s3://"${BUCKET}"/backup.tar - --no-progress | tar -C minecraft --anchored --exclude=whitelist.json --exclude=ops.json -x
+  aws s3 cp s3://"${BUCKET}"/backup.tar - --no-progress | tar -C minecraft -x
 fi
 
 echo "Download mods"
@@ -18,7 +18,7 @@ if [[ $(aws s3 ls s3://"${BUCKET}"/mods/client | wc -l) = 1 ]]; then
   aws s3 cp s3://"${BUCKET}"/mods/client minecraft/mods --recursive --no-progress
 fi
 
-echo "Enable private RCON and start with empty Minecraft player lists"
+echo "Enable private RCON and enforce the Minecraft whitelist"
 : "${RCON_PASSWORD:?Missing RCON_PASSWORD}"
 touch minecraft/server.properties
 chmod 600 minecraft/server.properties

@@ -6,7 +6,6 @@ import {
   ListTasksCommand,
 } from "@aws-sdk/client-ecs";
 import { InvokeCommand, type LambdaClient } from "@aws-sdk/client-lambda";
-import { GetParameterCommand, type SSMClient } from "@aws-sdk/client-ssm";
 import { listProfiles } from "./database/entities.ts";
 import { loadStrict } from "./env.ts";
 import type { AllowlistAction, OpAction } from "./lambdas/rcon.handler.ts";
@@ -14,7 +13,6 @@ import type { AllowlistAction, OpAction } from "./lambdas/rcon.handler.ts";
 interface Props {
   rconFunction: string;
   rconPassword: string;
-  host: string;
 }
 
 async function serverAddress(ecs: ECSClient, ec2: EC2Client) {
@@ -62,47 +60,34 @@ async function serverAddress(ecs: ECSClient, ec2: EC2Client) {
   return address;
 }
 
-export async function initRconProps(
-  ssm: SSMClient,
-  ecs: ECSClient,
-  ec2: EC2Client,
-): Promise<Props | undefined> {
-  const host = await serverAddress(ecs, ec2);
-  if (!host) {
-    return undefined;
-  }
-
-  const rconPasswordResponse = await ssm.send(
-    new GetParameterCommand({
-      Name: loadStrict("RCON_PASSWORD_PARAMETER"),
-      WithDecryption: true,
-    }),
-  );
-  if (!rconPasswordResponse.Parameter?.Value) {
-    throw new Error("RCON password not found");
-  }
-
-  return {
-    rconFunction: loadStrict("RCON_FUNCTION"),
-    rconPassword: rconPasswordResponse.Parameter.Value,
-    host: host,
-  };
-}
-
 export class RconClient {
   constructor(
     private readonly lambdaClient: LambdaClient,
+    private readonly ecsClient: ECSClient,
+    private readonly ec2Client: EC2Client,
     private readonly props: Props,
   ) {}
 
+  private async resolveHost() {
+    const host = await serverAddress(this.ecsClient, this.ec2Client);
+    if (!host) {
+      throw new Error(
+        "Minecraft server is offline; allowlist will be applied after startup",
+      );
+    }
+
+    return host;
+  }
+
   public async sendAllowlistAction() {
+    const host = await this.resolveHost();
     const profiles = await listProfiles();
     console.log(`Found ${profiles.length} profiles in the database`);
     const usernames = profiles.map((profile) => profile.minecraftName);
     const uniqueUsers = [...new Set(usernames)];
     const request: AllowlistAction = {
       action: "allowlist",
-      host: this.props.host,
+      host,
       password: this.props.rconPassword,
       usernames: uniqueUsers,
     };
@@ -122,9 +107,10 @@ export class RconClient {
   }
 
   public async sendOpAction(op: string) {
+    const host = await this.resolveHost();
     const opRequest: OpAction = {
       action: "op",
-      host: this.props.host,
+      host,
       password: this.props.rconPassword,
       username: op,
     };

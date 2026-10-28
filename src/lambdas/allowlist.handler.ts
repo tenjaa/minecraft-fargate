@@ -1,9 +1,9 @@
 import { EC2Client } from "@aws-sdk/client-ec2";
 import { ECSClient } from "@aws-sdk/client-ecs";
 import { LambdaClient } from "@aws-sdk/client-lambda";
-import { SSMClient } from "@aws-sdk/client-ssm";
+import { GetParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 import { loadStrict } from "../env.ts";
-import { initRconProps, RconClient } from "../rcon-client.ts";
+import { RconClient } from "../rcon-client.ts";
 import { Allowlist } from "./allowlist.ts";
 
 console.log("Allowlist handler loaded");
@@ -14,13 +14,20 @@ const ec2Client = new EC2Client();
 
 console.log("Created clients");
 
-const props = await initRconProps(ssmClient, ecsClient, ec2Client);
-if (!props) {
-  throw new Error(
-    "Minecraft server is offline; allowlist will be applied after startup",
-  );
+const rconPasswordResponse = await ssmClient.send(
+  new GetParameterCommand({
+    Name: loadStrict("RCON_PASSWORD_PARAMETER"),
+    WithDecryption: true,
+  }),
+);
+if (!rconPasswordResponse.Parameter?.Value) {
+  throw new Error("RCON password not found");
 }
-const rconClient = new RconClient(lambdaClient, props);
+
+const rconClient = new RconClient(lambdaClient, ecsClient, ec2Client, {
+  rconFunction: loadStrict("RCON_FUNCTION"),
+  rconPassword: rconPasswordResponse.Parameter.Value,
+});
 
 export const handler = new Allowlist(rconClient, {
   opUsername: loadStrict("OP_USERNAME"),
