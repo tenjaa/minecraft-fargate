@@ -147,7 +147,7 @@ async function handleOp(event: z.infer<typeof opAction>) {
 
     await command(client, `op ${event.username}`, [
       `Made ${event.username} a server operator`,
-      "Nothing changed. The player already is an operator",
+      "Nothing changed. The player is already an operator",
     ]);
   } catch (error) {
     console.error(
