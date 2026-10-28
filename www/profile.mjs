@@ -5,8 +5,7 @@ export function createProfile(doc, win, auth, onExpired) {
   const current = doc.getElementById("profile-current");
   const status = doc.getElementById("profile-status");
   const save = doc.getElementById("profile-save");
-  const remove = doc.getElementById("profile-remove");
-  const refresh = doc.getElementById("profile-refresh");
+  const retry = doc.getElementById("profile-retry");
   let active = false;
   let busy = false;
   let dirty = false;
@@ -18,8 +17,8 @@ export function createProfile(doc, win, auth, onExpired) {
   function controls() {
     input.disabled = !active || busy || !loaded;
     save.disabled = !active || busy || !loaded;
-    remove.disabled = !active || busy || !loaded || !profile;
-    refresh.disabled = !active || busy;
+    save.textContent = profile ? "Update username" : "Save username";
+    retry.disabled = !active || busy;
     form.setAttribute("aria-busy", String(busy));
   }
 
@@ -31,9 +30,10 @@ export function createProfile(doc, win, auth, onExpired) {
     const expectedGeneration = generation;
     const payload = method === "PUT" ? { name: input.value.trim() } : undefined;
     busy = true;
+    retry.hidden = true;
     controls();
     if (method !== "GET") {
-      status.textContent = "Zuordnung wird gespeichert ...";
+      status.textContent = "Saving username...";
     }
     try {
       const value = await auth.request(method, "profile", payload);
@@ -43,15 +43,15 @@ export function createProfile(doc, win, auth, onExpired) {
       profile = value.profile;
       loaded = true;
       current.textContent = profile
-        ? `Verknuepft: ${profile.name}`
-        : "Noch kein Minecraft-Account verknuepft.";
+        ? `Saved username: ${profile.name}`
+        : "No username saved yet.";
       if (method !== "GET" || !dirty) {
         input.value = profile?.name ?? "";
         dirty = false;
       }
-      status.textContent = `${
-        profile ? "Zuordnung gespeichert." : "Keine Zuordnung gespeichert."
-      } Der Status der Uebernahme in Minecraft ist hier nicht verfuegbar.`;
+      status.textContent = profile
+        ? "Username saved. This page can't confirm when server access takes effect."
+        : "Enter your Minecraft username to get started.";
     } catch (error) {
       if (!active || expectedGeneration !== generation) {
         return;
@@ -60,18 +60,19 @@ export function createProfile(doc, win, auth, onExpired) {
         onExpired();
         return;
       }
+      retry.hidden = false;
       status.textContent =
         {
           "invalid-name":
-            "Bitte gib einen Minecraft-Java-Namen mit 3 bis 16 Zeichen ein: Buchstaben, Ziffern oder Unterstrich.",
+            "Enter a Java Edition username with 3 to 16 letters, numbers, or underscores.",
           "unknown-player":
-            "Dieser Minecraft-Java-Account wurde nicht gefunden.",
+            "That Minecraft Java account wasn't found. Check the username and try again.",
           storage:
-            "Der Sitzungsspeicher ist nicht verfuegbar. Bitte lade die Seite erneut.",
+            "Session storage is unavailable. Reload this page to try again.",
           response:
-            "Die Profilantwort konnte nicht sicher gelesen werden. Bitte aktualisiere die Zuordnung erneut.",
+            "Your account response couldn't be read safely. Try again to check the saved username.",
         }[error.kind] ??
-        "Die Profilanfrage ist fehlgeschlagen. Ob eine Aenderung gespeichert wurde, kannst du mit Zuordnung aktualisieren pruefen.";
+        "Your account couldn't be reached. Try again to check whether the username was saved.";
     } finally {
       if (expectedGeneration === generation) {
         busy = false;
@@ -92,12 +93,7 @@ export function createProfile(doc, win, auth, onExpired) {
       return update("PUT");
     }
   });
-  remove.addEventListener("click", () => {
-    if (profile) {
-      return update("DELETE");
-    }
-  });
-  refresh.addEventListener("click", () => update());
+  retry.addEventListener("click", () => update());
 
   function stop() {
     active = false;
@@ -111,6 +107,7 @@ export function createProfile(doc, win, auth, onExpired) {
     current.textContent = "";
     status.textContent = "";
     section.hidden = true;
+    retry.hidden = true;
     controls();
   }
 
@@ -120,7 +117,7 @@ export function createProfile(doc, win, auth, onExpired) {
     }
     active = true;
     section.hidden = false;
-    status.textContent = "Minecraft-Zuordnung wird geladen ...";
+    status.textContent = "Loading your Minecraft username...";
     update();
   }
 

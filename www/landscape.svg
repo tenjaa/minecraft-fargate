@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="320" viewBox="0 0 1440 320" fill="none">
+  <title>A block-built lakeside with grass, stone, and trees</title>
+  <path fill="#DCEFFA" d="M0 0h1440v320H0z"/>
+  <path fill="#FFF" d="M155 48h64v-16h64v16h48v24H155zm874 1h48V25h80v24h64v24h-192zM634 89h48V73h64v16h48v24H634z"/>
+  <path fill="#B5CDCE" d="M0 216h80v-40h64v-32h80v32h64v40h80v-24h80v-48h64v-32h80v64h64v40h128v-40h64v-48h80v48h80v40h128v-32h80v-56h64v-32h80v56h64v32h64v-24h64v160H0z"/>
+  <path fill="#7B9C8B" d="M0 248h112v-32h112v32h128v-32h96v32h128v32h128v-32h96v-32h112v-32h96v32h80v32h144v-32h112v32h96v72H0z"/>
+  <path fill="#52616B" d="M0 280h176v-32h128v32h176v40H0zm1088 0h96v-32h144v-32h112v104h-352z"/>
+  <path fill="#69894B" d="M0 272h176v-32h128v32h176v16H304v-32H176v32H0zm1088 0h96v-32h144v-32h112v16h-112v32h-144v32h-96z"/>
+  <path fill="#286B96" d="M480 288h608v32H480z"/>
+  <path fill="#75ABC3" d="M544 288h224v8H544zm304 16h176v8H848z"/>
+  <path fill="#71543D" d="M372 184h16v96h-16zm758-24h16v112h-16z"/>
+  <path fill="#405E31" d="M324 136h32v-32h48v32h32v64H324zm758-24h32V80h48v32h32v64h-112z"/>
+  <path fill="#537A3C" d="M324 136h32v-32h48v32h-32v32h-48zm758-24h32V80h48v32h-32v32h-48z"/>
+  <path fill="#83919A" d="M32 296h32v16H32zm192-24h32v16h-32zm1128 0h32v16h-32z"/>
+  <path fill="#405E31" d="M80 260v-16h8v16zm16 0v-24h8v24zm1160-32v-16h8v16zm16 0v-24h8v24z"/>
+</svg>

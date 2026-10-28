@@ -1,33 +1,46 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://*.amazonaws.com; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
-    <title>Anmelden · Minecraft</title>
+    <title>Sign in · Minecraft Basecamp</title>
+    <link rel="stylesheet" href="./site.css" />
     <link rel="stylesheet" href="./login.css" />
     <script type="module" src="./login.mjs"></script>
   </head>
   <body>
-    <main aria-labelledby="login-title">
-      <h1 id="login-title">Minecraft Login</h1>
-      <p>Melde dich mit deiner freigeschalteten E-Mail-Adresse an.</p>
-      <form id="email-form">
-        <label for="email">E-Mail-Adresse</label>
-        <input id="email" name="email" type="email" autocomplete="username" maxlength="254" placeholder="du@beispiel.de" required disabled />
-        <button type="submit" disabled>Code senden</button>
-      </form>
-      <form id="code-form" hidden>
-        <p class="login-email">E-Mail-Adresse: <strong id="submitted-email"></strong></p>
-        <label for="code">Code aus deiner E-Mail</label>
-        <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]+" maxlength="16" required disabled aria-describedby="code-help" />
-        <p id="code-help" class="hint">Pruefe auch deinen Spam-Ordner.</p>
-        <button type="submit" disabled>Anmelden</button>
-        <button id="restart" class="secondary" type="button" disabled>Andere E-Mail / neuen Code anfordern</button>
-      </form>
-      <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Anmeldung wird vorbereitet ...</p>
-      <noscript><p class="status">Bitte aktiviere JavaScript, um dich sicher anzumelden.</p></noscript>
+    <header class="masthead">
+      <a class="brand" href="./index.html">Minecraft Basecamp</a>
+      <span class="edition">Java Edition</span>
+    </header>
+    <div class="landscape" aria-hidden="true"></div>
+    <main class="login-shell" aria-labelledby="login-title">
+      <div class="login-intro">
+        <h1 id="login-title">A good place<br />to build.</h1>
+        <p>Start the server, grab your mods, and pick up where you left off.</p>
+      </div>
+      <section class="login-panel" aria-labelledby="signin-title">
+        <h2 id="signin-title">Sign in to your world</h2>
+        <p>Use your approved email address. No password needed.</p>
+        <form id="email-form">
+          <label for="email">Email address</label>
+          <input id="email" name="email" type="email" autocomplete="username" maxlength="254" placeholder="you@example.com" required disabled />
+          <button type="submit" disabled>Send sign-in code</button>
+        </form>
+        <form id="code-form" hidden>
+          <p class="login-email">Signing in as <strong id="submitted-email"></strong></p>
+          <label for="code">Email code</label>
+          <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]+" maxlength="16" required disabled aria-describedby="code-help" />
+          <p id="code-help" class="hint">Check your spam folder too.</p>
+          <button type="submit" disabled>Sign in</button>
+          <button id="restart" class="secondary" type="button" disabled>Use another email or request a new code</button>
+        </form>
+        <p id="status" class="status" role="status" aria-live="polite" aria-atomic="true">Preparing sign-in...</p>
+        <noscript><p class="status">Enable JavaScript in your browser to sign in.</p></noscript>
+      </section>
     </main>
+    <footer>Your sign-in stays in this tab for up to 7 days.</footer>
   </body>
 </html>

@@ -1,5 +1,5 @@
 export const FIRST_STEP_MESSAGE =
-  "Falls deine Adresse freigeschaltet ist, erhaeltst du einen Code. Pruefe dein E-Mail-Postfach.";
+  "If your email address is approved, you'll receive a sign-in code. Check your inbox.";
 
 export class SafeError extends Error {
   constructor(kind) {

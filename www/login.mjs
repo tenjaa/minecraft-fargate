@@ -20,7 +20,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
   let generation = 0;
   let auth;
   const storageMessage =
-    "Der sichere Seitenwechsel ist nicht moeglich. Bitte erlaube Sitzungsspeicher in diesem Browser.";
+    "Sign-in requires session storage. Allow it in your browser and try again.";
 
   function setBusy(value) {
     busy = value;
@@ -64,7 +64,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
     session = undefined;
     username = undefined;
     setBusy(false);
-    status.textContent = "Angemeldet. Deine Welt wird geoeffnet ...";
+    status.textContent = "Signed in. Opening your world...";
     win.location.replace("callback.html");
   }
 
@@ -83,7 +83,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
     session = undefined;
     username = undefined;
     codeForm.reset();
-    status.textContent = "Angemeldet. Deine Welt wird geoeffnet ...";
+    status.textContent = "Signed in. Opening your world...";
   }
 
   emailForm.addEventListener("submit", async (event) => {
@@ -95,7 +95,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
     setBusy(true);
     session = undefined;
     username = email.value.trim();
-    status.textContent = "Code wird angefordert ...";
+    status.textContent = "Requesting your code...";
     try {
       let result = await cognito(
         config,
@@ -154,7 +154,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
       if (error.kind === "network" || error.kind === "storage") {
         status.textContent =
           error.kind === "network"
-            ? "Verbindung fehlgeschlagen. Bitte pruefe dein Netzwerk und versuche es erneut."
+            ? "Connection failed. Check your network and try again."
             : storageMessage;
         return;
       }
@@ -180,7 +180,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
     }
     const requestGeneration = generation;
     setBusy(true);
-    status.textContent = "Code wird geprueft ...";
+    status.textContent = "Checking your code...";
     try {
       if (!session) {
         throw new SafeError("code");
@@ -213,15 +213,15 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
       if (error.kind === "expired") {
         session = undefined;
         status.textContent =
-          "Der Code oder die Anmeldung ist abgelaufen. Bitte fordere einen neuen Code an.";
+          "Your code or sign-in has expired. Request a new code.";
       } else if (error.kind === "network") {
         status.textContent =
-          "Verbindung fehlgeschlagen. Bitte pruefe dein Netzwerk und versuche den Code erneut.";
+          "Connection failed. Check your network and enter the code again.";
       } else if (error.kind === "storage") {
         status.textContent = storageMessage;
       } else {
         status.textContent =
-          "Der Code konnte nicht bestaetigt werden. Pruefe ihn oder fordere einen neuen Code an.";
+          "The code couldn't be verified. Check it or request a new code.";
       }
       code.value = "";
       code.focus();
@@ -237,7 +237,7 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
       return;
     }
     reset(true);
-    status.textContent = "Fordere einen neuen Code an.";
+    status.textContent = "Request a new sign-in code.";
     email.focus();
   });
   win.addEventListener("pagehide", () => {
@@ -252,12 +252,12 @@ export function startLogin(doc = document, win = window, fetcher = fetch) {
       generation += 1;
       active = true;
       setBusy(false);
-      status.textContent = "Bitte melde dich erneut an.";
+      status.textContent = "Sign in again to continue.";
       redirectSavedSession();
     }
   });
   setBusy(false);
-  status.textContent = "Fordere deinen Login-Code an.";
+  status.textContent = "Enter your email to request a sign-in code.";
   redirectSavedSession();
 }
 
