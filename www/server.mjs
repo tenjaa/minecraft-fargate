@@ -1,34 +1,42 @@
 import { createAuth } from "./auth.mjs";
 import { createProfile } from "./profile.mjs";
-import { SafeError, safeDownloadUrl, scrubFragment } from "./site.mjs";
+import { SafeError, scrubFragment } from "./site.mjs";
 
 export function renderServer(doc, value) {
   doc.getElementById("address").textContent = value.address;
-  const clients = doc.getElementById("client-mods");
-  clients.replaceChildren();
-  for (const mod of value.mods.client) {
-    const item = doc.createElement("li");
-    const link = doc.createElement("a");
-    const url = safeDownloadUrl(mod.url);
-    if (!url) {
-      continue;
+  const mods = doc.getElementById("mods");
+  mods.replaceChildren();
+  for (const [source, names] of [
+    ["client", value.mods.client.map((mod) => mod.name)],
+    ["server", value.mods.server],
+  ]) {
+    for (const filename of names) {
+      const item = doc.createElement("li");
+      const link = doc.createElement("a");
+      const url = new URL("https://modrinth.com/discover/mods");
+      url.searchParams.set("q", filename.replace(/\.jar$/i, ""));
+      link.href = url.href;
+      link.target = "_blank";
+      link.rel = "noreferrer noopener";
+      const name = doc.createElement("span");
+      name.className = "mod-name";
+      name.textContent = filename;
+      const origin = doc.createElement("small");
+      origin.className = "mod-source";
+      origin.textContent = `Source: ${source} folder`;
+      name.append(origin);
+      const action = doc.createElement("span");
+      action.className = "download-label";
+      action.textContent = "Find on Modrinth";
+      link.append(name, action);
+      item.append(link);
+      mods.append(item);
     }
-    link.href = url;
-    link.rel = "noreferrer noopener";
-    const name = doc.createElement("span");
-    name.textContent = mod.name;
-    const action = doc.createElement("span");
-    action.className = "download-label";
-    action.textContent = "Download";
-    action.setAttribute("aria-hidden", "true");
-    link.append(name, action);
-    item.append(link);
-    clients.append(item);
   }
-  if (!clients.children.length) {
+  if (!mods.children.length) {
     const item = doc.createElement("li");
-    item.textContent = "No client mods needed. You're ready to join.";
-    clients.append(item);
+    item.textContent = "No mods needed. You're ready to join.";
+    mods.append(item);
   }
 }
 
@@ -313,7 +321,7 @@ export async function startServer(
     start.disabled = true;
     copy.disabled = true;
     address = undefined;
-    for (const id of ["address", "client-mods"]) {
+    for (const id of ["address", "mods"]) {
       doc.getElementById(id).replaceChildren();
     }
   });

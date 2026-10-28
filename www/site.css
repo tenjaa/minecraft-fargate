@@ -270,6 +270,14 @@ dd {
   color: var(--stone);
   flex-shrink: 0;
 }
+.mod-name {
+  min-width: 0;
+}
+.mod-source {
+  display: block;
+  color: var(--stone);
+  font-size: 0.75rem;
+}
 .profile-panel {
   display: grid;
   grid-template-columns: 1fr 1.2fr;
